@@ -1,0 +1,12 @@
+================================================
+Date: 2026-11-04
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-02
+
+Prompt:
+Asked Claude to explain the project requirements for airports and airlines and to assist in generating the NestJS schema, DTOs, service, and controller for the airport module (including a seed script).
+
+How the output was used:
+Used as the base for the airports module; reviewed the generated code and tested the endpoints in Swagger.
+================================================
