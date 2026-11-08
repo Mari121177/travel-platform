@@ -16,6 +16,7 @@ import { ItinerariesModule } from './itineraries/itineraries.module';
 import { BlogModule } from './blog/blog.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ReferenceDataModule } from './reference-data/reference-data.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { UploadsModule } from './uploads/uploads.module';
     BlogModule,
     NotificationsModule,
     UploadsModule,
+    ReferenceDataModule,
   ],
   controllers: [AppController],
   providers: [AppService],
