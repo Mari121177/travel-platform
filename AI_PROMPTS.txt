@@ -32,24 +32,6 @@ helper functions) and the ownership split between our modules.
 ================================================
 
 ================================================
-Date: 2026-11-03
-Student: Maya
-Tool: Claude
-Related Requirement: HTL-16, HTL-18, HTL-20, HTL-21, HTL-22, HTL-23, HTL-24
-Category: Generating code
-Prompt:
-Write the NestJS hotel-bookings module: schemas, DTOs, services, controllers
-and Swagger decorators for creating reservations with 10-minute holds,
-listing and viewing own reservations, cancellation with refund tiers,
-moderator reservation list, and reviews with rating recalculation. No guards
-yet (auth is not merged).
-How the output was used:
-Used the generated module as the base of src/hotel-bookings, then tested
-every endpoint in Swagger with my own test data. A temporary x-user-id header
-stands in for @CurrentUser() until auth is merged.
-================================================
-
-================================================
 Date: 2026-11-07
 Student: Maya
 Tool: Claude
