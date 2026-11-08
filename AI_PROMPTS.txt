@@ -1,0 +1,101 @@
+================================================
+Date: 2026-11-01
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18, HTL-20, HTL-21, HTL-23, HTL-24
+Category: Explaining concepts
+Prompt:
+Explain my part of the project (hotel search, hotel booking, reviews) using the
+project description and the Excel requirements sheet: which endpoints I own,
+what each requirement means, and which data and rules I share with member 5.
+How the output was used:
+Used the explanation to understand my requirement IDs, the booking lifecycle
+(Pending Payment, Confirmed, Completed, Expired, Cancelled), the refund-tier
+rule and the review eligibility rule before writing any code.
+================================================
+
+================================================
+Date: 2026-11-02
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18
+Category: Brainstorming implementation approaches
+Prompt:
+How can concurrent hotel bookings and overlapping multi-room reservations be
+prevented in MongoDB? Compare options and tell me what data member 5 and I
+need to agree on (booking states, date format, function names and signatures).
+How the output was used:
+Chose a room-night collection with a unique (roomId, date) index, written
+inside a Mongo transaction so a multi-room hold is all-or-nothing. Used the
+suggested contract with member 5 (inclusive night ranges, checkOut exclusive,
+helper functions) and the ownership split between our modules.
+================================================
+
+================================================
+Date: 2026-11-03
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18, HTL-20, HTL-21, HTL-22, HTL-23, HTL-24
+Category: Generating code
+Prompt:
+Write the NestJS hotel-bookings module: schemas, DTOs, services, controllers
+and Swagger decorators for creating reservations with 10-minute holds,
+listing and viewing own reservations, cancellation with refund tiers,
+moderator reservation list, and reviews with rating recalculation. No guards
+yet (auth is not merged).
+How the output was used:
+Used the generated module as the base of src/hotel-bookings, then tested
+every endpoint in Swagger with my own test data. A temporary x-user-id header
+stands in for @CurrentUser() until auth is merged.
+================================================
+
+================================================
+Date: 2026-11-07
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18, HTL-23
+Category: Reviewing code
+Prompt:
+Review member 5's hotel and room schemas and hotels service against my module:
+do the field names, method signatures, forwardRef setup and availability
+behavior match what my booking service calls?
+How the output was used:
+Found that her availability check passes my transaction session into my
+getTakenRoomIds, and fixed two small mismatches (hotelId comparison and a
+plain copy of the cancellation tiers). Asked her for the missing export and
+forwardRef in her module.
+================================================
+
+================================================
+Date: 2026-11-07
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-18
+Category: Debugging
+Prompt:
+Why would a booking fail when member 5's checkRoomAvailability calls my
+getTakenRoomIds inside my transaction? Also helped me read my Swagger 404
+(wrong test ids), the git pull/merge errors, and the build output.
+How the output was used:
+Replaced distinct() with an aggregation, because distinct is not allowed
+inside a MongoDB transaction. Corrected my test ids and fixed my git state
+(stash, aborting the unfinished merge, staging only my own folder).
+================================================
+
+================================================
+Date: 2026-11-08
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-20, HTL-21, HTL-23, HTL-24
+Category: Refactoring and improving documentation
+Prompt:
+Refactor my module to use member 5's HotelsService instead of my temporary
+adapter, rename my helper methods to match her names (hasOverlappingReservation,
+wasEverReserved, getTakenRoomIds, getBookedNights), add an optional session to
+every helper, and write a step-by-step Swagger test plan with a request body for
+each test, plus the messages and PR description for my teammates.
+How the output was used:
+Applied the refactor after pulling her code and re-ran the whole test plan.
+Used the generated test plan to test every endpoint, and the messages and
+PR text with minor edits.
+================================================
