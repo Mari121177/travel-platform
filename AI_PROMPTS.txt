@@ -1,0 +1,47 @@
+================================================
+Date: 2026-11-03
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: PAY-01, PAY-02, PAY-03, GEN-01
+Category: Explaining concepts
+Prompt:
+Summarize the project description and my module (payments, refunds, policy
+acceptance, notifications): which endpoints I own and which teammates I
+depend on.
+How the output was used:
+Used the summary to plan my branches and the order of my work, and to set
+up the backend locally.
+================================================
+
+================================================
+Date: 2026-11-06
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: GEN-01, GEN-05
+Category: Code generation, Debugging
+Prompt:
+List the changes in the updated PDF and requirements sheet that affect my
+part, then generate a NestJS notifications module (schema, DTOs, service with
+send(userId, type, message), controller) following GEN-01 and GEN-05.
+Also: why does the Atlas connection fail with querySrv ECONNREFUSED on Windows?
+How the output was used:
+Reviewed the code against GEN-01/GEN-05, tested all endpoints in Swagger with
+valid and invalid ids, removed a duplicate Swagger header found during
+testing, and opened PR #2. Fixed the Atlas error by switching to a standard
+(non-SRV) connection string.
+================================================
+
+================================================
+Date: 2026-11-09
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: PAY-01, PAY-02, PAY-03
+Category: Brainstorming implementation approaches
+Prompt:
+How can the payments module and the flight/hotel booking modules call each
+other without a circular dependency, as requested in the PR review?
+How the output was used:
+Used the suggested design (injection tokens resolved with ModuleRef) in the
+contract proposal I sent to members 4 and 6 for agreement before
+implementing it.
+================================================
