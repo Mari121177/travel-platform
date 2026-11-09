@@ -56,4 +56,26 @@ export class UsersService {
       lastActivityAt: new Date(),
     });
   }
+
+  // Only the fields the authentication guard needs on every request
+  findSessionUser(id: string) {
+    return this.userModel
+      .findById(id)
+      .select(
+        'name email role status assignedProviderId preferredCurrency mustChangePassword lastActivityAt',
+      );
+  }
+
+  // Records an authenticated request (restarts the 30 minute inactivity timer, ACC-06)
+  touchActivity(id: string) {
+    return this.userModel.updateOne({ _id: id }, { lastActivityAt: new Date() });
+  }
+
+  // Logout: revokes the refresh token and ends the session (ACC-06)
+  clearSession(id: string) {
+    return this.userModel.updateOne(
+      { _id: id },
+      { refreshTokenHash: null, lastActivityAt: null },
+    );
+  }
 }

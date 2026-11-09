@@ -20,6 +20,7 @@ import {
 } from './auth.constants';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import type { TokenPayload } from './auth.types';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -118,6 +119,28 @@ export class AuthService {
     return { accessToken, refreshToken, user: this.toPublicUser(user) };
   }
 
+  // ACC-06: ends the session and revokes the refresh token on the server.
+  // userId comes from a valid access token. If that has expired, the user is
+  // identified from the refresh token instead. If neither is valid there is
+  // nothing to revoke, and the controller still clears the cookies.
+  async logout(userId: string | undefined, refreshToken: string | undefined) {
+    let id = userId;
+    if (!id && refreshToken) {
+      try {
+        const payload =
+          await this.jwtService.verifyAsync<TokenPayload>(refreshToken);
+        if (payload.typ === 'refresh') {
+          id = payload.sub;
+        }
+      } catch {
+        // expired or invalid refresh token: nothing left to revoke
+      }
+    }
+    if (id) {
+      await this.usersService.clearSession(id);
+    }
+  }
+
   private async issueTokens(userId: string) {
     const accessToken = await this.jwtService.signAsync(
       { sub: userId, typ: 'access' },
@@ -147,6 +170,9 @@ export class AuthService {
       email: user.email,
       role: user.role,
       status: user.status,
+      assignedProviderId: user.assignedProviderId
+        ? user.assignedProviderId.toString()
+        : null,
       preferredCurrency: user.preferredCurrency,
       mustChangePassword: user.mustChangePassword,
     };
