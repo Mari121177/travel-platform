@@ -8,6 +8,7 @@ import {
   NotFoundException,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { randomBytes } from 'crypto';
@@ -26,6 +27,9 @@ import {
   RoomNightStatus,
 } from './hotel-booking.constants';
 import { HotelsService } from '../hotels/hotels.service';
+import type { PayableBooking } from './ports/hotel-booking.port';
+import type { PaymentsPort } from './ports/payments.port';
+import { PAYMENTS_PORT } from './ports/payments.port';
 import { HotelBooking, HotelBookingDocument } from './schemas/hotel-booking.schema';
 import { RoomNight, RoomNightDocument } from './schemas/room-night.schema';
 
@@ -43,6 +47,8 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     @InjectConnection() private readonly connection: Connection,
     // circular with HotelsService (it calls our helpers): forwardRef on both sides
     @Inject(forwardRef(() => HotelsService)) private readonly hotels: HotelsService,
+    // provided by payments (member 7); optional so we work before it is merged
+    @Optional() @Inject(PAYMENTS_PORT) private readonly payments?: PaymentsPort,
   ) {}
 
   // ---- hold expiry job (HTL-18) ----
@@ -66,9 +72,24 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
       { _id: { $in: ids }, status: BookingStatus.PendingPayment },
       { $set: { status: BookingStatus.Expired } },
     );
-    await this.roomNightModel.deleteMany({ bookingId: { $in: ids }, status: RoomNightStatus.Held });
-    // TODO(member 7): cancel the Stripe PaymentIntent for each expired booking (PAY-01)
-    return ids.length;
+    // only the ones we really expired (a payment may have confirmed one in between)
+    const expired = await this.bookingModel
+      .find({ _id: { $in: ids }, status: BookingStatus.Expired })
+      .select('_id');
+    const expiredIds = expired.map((b) => b._id);
+    await this.roomNightModel.deleteMany({
+      bookingId: { $in: expiredIds },
+      status: RoomNightStatus.Held,
+    });
+    for (const id of expiredIds) {
+      if (!this.payments) break;
+      try {
+        await this.payments.cancelForExpiredHold('hotel', String(id));
+      } catch (e) {
+        this.logger.error(`cancelForExpiredHold failed for ${String(id)}`, e);
+      }
+    }
+    return expiredIds.length;
   }
 
   // ---- HTL-16 + HTL-18: create reservation and hold all rooms atomically ----
@@ -248,9 +269,49 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   /** PAY-02: payments stores policy acceptance on the reservation. */
   async markPoliciesAccepted(bookingId: string, userId: string) {
     const booking = await this.findOwned(userId, bookingId);
+    if (
+      booking.status !== BookingStatus.PendingPayment ||
+      !booking.holdExpiresAt ||
+      booking.holdExpiresAt < new Date()
+    ) {
+      throw new ConflictException('Policies can only be accepted while the reservation awaits payment');
+    }
     booking.policiesAcceptedAt = new Date();
     await booking.save();
     return this.toView(booking);
+  }
+
+  /** For payments (member 7): everything needed to start/verify a payment. No ownership check. */
+  async getPayableBooking(bookingId: string): Promise<PayableBooking> {
+    const b = await this.bookingModel.findById(bookingId).lean();
+    if (!b) throw new NotFoundException('Reservation not found');
+    let hotelActive = true;
+    try {
+      await this.hotels.findHotelById(String(b.hotelId)); // 404 for deactivated/missing hotels
+    } catch (e) {
+      if (!(e instanceof NotFoundException)) throw e;
+      hotelActive = false;
+    }
+    return {
+      bookingId: String(b._id),
+      type: 'hotel',
+      reference: b.reference ?? null,
+      hotelName: b.hotelName,
+      userId: String(b.userId),
+      status: b.status,
+      totalPrice: b.totalPrice,
+      holdExpiresAt: b.holdExpiresAt ?? null,
+      hotelActive,
+      policies: {
+        cancellationTiers: (b.cancellationTiers ?? []).map((t) => ({
+          daysBefore: t.daysBefore,
+          refundPercent: t.refundPercent,
+        })),
+        checkInTime: b.checkInTime,
+        checkOutTime: b.checkOutTime,
+      },
+      policiesAcceptedAt: b.policiesAcceptedAt ?? null,
+    };
   }
 
   // ---- HTL-20 ----
@@ -301,9 +362,26 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
       await booking.save({ session });
       await this.roomNightModel.deleteMany({ bookingId: booking._id }, { session });
     });
-    // TODO(member 7): if refund.refundAmount > 0 create the Stripe refund (PAY-03) and
-    // set booking.refundId; send cancellation/refund notification (GEN-01)
-    return { booking: this.toView(booking), refund };
+    // refund is created by payments AFTER our transaction committed; a Stripe hiccup must not
+    // undo the cancellation (payments records the refund as Failed and can retry).
+    let refundId: string | null = null;
+    if (refund.refundAmount > 0 && this.payments) {
+      try {
+        const r = await this.payments.refund(
+          'hotel',
+          String(booking._id),
+          refund.refundAmount,
+          'UserCancellation',
+        );
+        refundId = typeof r === 'string' ? r : r.id;
+        booking.refundId = refundId;
+        await booking.save();
+      } catch (e) {
+        this.logger.error(`refund failed for ${String(booking._id)}`, e);
+      }
+    }
+    // TODO(member 7, after notifications PR): cancellation/refund notification (GEN-01)
+    return { booking: this.toView(booking), refund: { ...refund, refundId } };
   }
 
   // ---- HTL-22: moderator view (TODO guard: moderator's own hotel only) ----
