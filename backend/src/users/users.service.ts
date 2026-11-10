@@ -89,4 +89,21 @@ export class UsersService {
       { new: true },
     );
   }
+
+  // Change password: the hash is hidden by default, so it must be requested
+  // explicitly (ACC-08)
+  findByIdWithPassword(id: string) {
+    return this.userModel.findById(id).select('+passwordHash');
+  }
+
+  // Stores the new password hash, ends the temporary-password state and
+  // replaces the refresh token, so every older refresh token stops working
+  // (ACC-08, ACC-07a)
+  updatePassword(id: string, passwordHash: string, refreshTokenHash: string) {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      { passwordHash, mustChangePassword: false, refreshTokenHash },
+      { new: true },
+    );
+  }
 }

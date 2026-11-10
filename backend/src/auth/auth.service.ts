@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   HttpException,
@@ -19,6 +20,7 @@ import {
   MAX_FAILED_LOGINS,
   REFRESH_TOKEN_TTL_SECONDS,
 } from './auth.constants';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import type { TokenPayload } from './auth.types';
@@ -120,6 +122,41 @@ export class AuthService {
     );
 
     return { accessToken, refreshToken, user: this.toPublicUser(user) };
+  }
+
+  // ACC-08, ACC-07a: the user proves they know the current password, then sets
+  // a new one. The session continues with fresh tokens and every older refresh
+  // token stops working.
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user) {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+
+    const currentOk = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!currentOk) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    // A temporary password must really be replaced
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+
+    // GEN-13: only a salted hash is stored
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    const tokens = await this.issueTokens(userId);
+    const updated = await this.usersService.updatePassword(
+      userId,
+      passwordHash,
+      sha256(tokens.refreshToken),
+    );
+    if (!updated) {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+
+    return { ...tokens, user: this.toPublicUser(updated) };
   }
 
   // ACC-06, ACC-19: swaps a valid refresh token for a new access token and a

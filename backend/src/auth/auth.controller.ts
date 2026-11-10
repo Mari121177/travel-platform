@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   Res,
@@ -32,6 +33,7 @@ import type {
 import { REFRESH_COOKIE } from './auth.constants';
 import { clearAuthCookies, setAuthCookies } from './auth.cookies';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -111,6 +113,32 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
   @ApiForbiddenResponse({ description: 'Account suspended or deactivated' })
   me(@CurrentUser() user: AuthUser) {
+    return user;
+  }
+
+  // AllowPasswordChange: an account with a temporary password must be able to
+  // call this route, it is how the temporary password gets replaced (ACC-07a)
+  @Patch('change-password')
+  @AllowPasswordChange()
+  @ApiCookieAuth()
+  @ApiOperation({
+    summary:
+      'Change my password with the current password and a new one (ACC-08). Also ends a temporary password (ACC-07a)',
+  })
+  @ApiOkResponse({ description: 'Password changed. New cookies are set. Returns the user' })
+  @ApiBadRequestResponse({
+    description: 'Current password wrong, new password breaks the rules or equals the current one',
+  })
+  @ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+  @ApiForbiddenResponse({ description: 'Account suspended or deactivated' })
+  async changePassword(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } =
+      await this.authService.changePassword(userId, dto);
+    setAuthCookies(res, accessToken, refreshToken);
     return user;
   }
 
