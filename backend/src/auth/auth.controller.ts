@@ -75,6 +75,32 @@ export class AuthController {
     return user;
   }
 
+  // Public on purpose: it is called when the access token has expired. The
+  // refresh token cookie (sent only to /api/auth) is what proves the session.
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth()
+  @ApiOperation({
+    summary:
+      'Get a new access token using the refresh token cookie. The refresh token is replaced too (ACC-06, ACC-19)',
+  })
+  @ApiOkResponse({ description: 'New cookies set. Returns the user' })
+  @ApiUnauthorizedResponse({
+    description: 'No refresh token, invalid or already used, logged out, or inactive for 30 minutes',
+  })
+  @ApiForbiddenResponse({ description: 'Account suspended or deactivated' })
+  async refresh(
+    @Req() req: RequestWithUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } = await this.authService.refresh(
+      req.cookies?.[REFRESH_COOKIE],
+    );
+    setAuthCookies(res, accessToken, refreshToken);
+    return user;
+  }
+
   @Get('me')
   @AllowPasswordChange()
   @ApiCookieAuth()
