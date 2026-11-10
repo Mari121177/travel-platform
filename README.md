@@ -35,12 +35,19 @@ travel-platform/
    npm install
    ```
 
-3. Create `backend/.env` (copy the variable names from `.env.example`) and add the
-   MongoDB connection string sent privately by the team leader:
+3. Create `backend/.env` (copy the variable names from `.env.example`) with two values:
 
    ```
    MONGODB_URI=<team-mongodb-atlas-connection-string>
+   JWT_SECRET=<your-own-long-random-string>
    ```
+
+   - `MONGODB_URI`: the connection string sent privately by the team leader.
+   - `JWT_SECRET`: generate your own by running this command and copying its output:
+
+     ```bash
+     node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+     ```
 
    Never commit `.env`.
 
