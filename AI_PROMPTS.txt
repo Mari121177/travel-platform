@@ -6,8 +6,7 @@ Related Requirement: GEN-01, GEN-05
 Category: Code generation, Debugging
 Prompt:
 List the changes in the updated PDF and requirements sheet that affect my
-part, then generate a NestJS notifications module (schema, DTOs, service with
-send(userId, type, message), controller) following GEN-01 and GEN-05.
+part, and help me write the notifications module following GEN-01 and GEN-05.
 Also: why does the Atlas connection fail with querySrv ECONNREFUSED on Windows?
 How the output was used:
 Reviewed the code against GEN-01/GEN-05, tested all endpoints in Swagger with
