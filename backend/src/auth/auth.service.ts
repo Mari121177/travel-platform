@@ -14,6 +14,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
+  INACTIVITY_LIMIT_MINUTES,
   LOCK_MINUTES,
   MAX_FAILED_LOGINS,
   REFRESH_TOKEN_TTL_SECONDS,
@@ -26,6 +27,8 @@ const BCRYPT_ROUNDS = 10;
 
 // ACC-04: the same message for an unknown email and a wrong password
 const INVALID_CREDENTIALS = 'Invalid email or password';
+
+const SESSION_INVALID = 'Invalid or expired session';
 
 // Compared against when the email does not exist, so response time does not
 // reveal whether an account exists
@@ -117,6 +120,57 @@ export class AuthService {
     );
 
     return { accessToken, refreshToken, user: this.toPublicUser(user) };
+  }
+
+  // ACC-06, ACC-19: swaps a valid refresh token for a new access token and a
+  // new refresh token (rotation). The old refresh token stops working.
+  async refresh(refreshToken: string | undefined) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Not logged in');
+    }
+
+    let payload: TokenPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<TokenPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+    // An access token must never work as a refresh token
+    if (payload.typ !== 'refresh') {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+
+    const user = await this.usersService.findSessionUser(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+    if (user.status === AccountStatus.Suspended) {
+      throw new ForbiddenException('Account suspended');
+    }
+    if (user.status === AccountStatus.Deactivated) {
+      throw new ForbiddenException('This account has been deactivated');
+    }
+
+    // Same 30 minute rule as the guard (ACC-06). No lastActivityAt means the
+    // session was ended by logout. Refreshing does not count as activity.
+    const last = user.lastActivityAt?.getTime();
+    if (!last || Date.now() - last > INACTIVITY_LIMIT_MINUTES * 60_000) {
+      throw new UnauthorizedException('Session expired due to inactivity');
+    }
+
+    const tokens = await this.issueTokens(user.id as string);
+    // Succeeds only if this is still the current refresh token of the user.
+    // An old or already used token finds no match and is rejected.
+    const updated = await this.usersService.rotateRefreshToken(
+      user.id as string,
+      sha256(refreshToken),
+      sha256(tokens.refreshToken),
+    );
+    if (!updated) {
+      throw new UnauthorizedException(SESSION_INVALID);
+    }
+
+    return { ...tokens, user: this.toPublicUser(updated) };
   }
 
   // ACC-06: ends the session and revokes the refresh token on the server.

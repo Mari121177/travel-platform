@@ -78,4 +78,15 @@ export class UsersService {
       { refreshTokenHash: null, lastActivityAt: null },
     );
   }
+
+  // Refresh: swaps the stored refresh token hash only if it still matches the
+  // token that was presented. One atomic step, so two requests with the same
+  // old token cannot both succeed (ACC-06, ACC-19).
+  rotateRefreshToken(id: string, oldHash: string, newHash: string) {
+    return this.userModel.findOneAndUpdate(
+      { _id: id, refreshTokenHash: oldHash },
+      { refreshTokenHash: newHash },
+      { new: true },
+    );
+  }
 }
