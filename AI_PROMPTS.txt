@@ -45,3 +45,18 @@ Used the suggested design (injection tokens resolved with ModuleRef) in the
 contract proposal I sent to members 4 and 6 for agreement before
 implementing it.
 ================================================
+
+================================================
+Date: 2026-11-11
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: GEN-01, GEN-13
+Category: Code generation
+Prompt:
+After the PR review, how should the notifications controller use the team's
+new @CurrentUser decorator instead of the temporary x-user-id header?
+How the output was used:
+Reviewed the updated controller, merged develop into my branch, and tested in
+Swagger: 401 when logged out, 200 after login. Coordinated the payments
+contract with member 6.
+================================================
