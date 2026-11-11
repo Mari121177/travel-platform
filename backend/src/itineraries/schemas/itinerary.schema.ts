@@ -46,6 +46,6 @@ export class Itinerary {
 export const ItinerarySchema = SchemaFactory.createForClass(Itinerary);
 
 // "My itineraries" list, newest first (ITN-03)
-ItinerarySchema.index({ ownerId: 1, createdAt: -1 });
+ItinerarySchema.index({ ownerId: 1, updatedAt: -1 });
 // Public search (ITN-20)
 ItinerarySchema.index({ visibility: 1, title: 1 });

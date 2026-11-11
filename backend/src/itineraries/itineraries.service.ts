@@ -50,7 +50,7 @@ export class ItinerariesService {
     const [items, total] = await Promise.all([
       this.itineraryModel
         .find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
       this.itineraryModel.countDocuments(filter),

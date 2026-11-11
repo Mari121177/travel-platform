@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  ArrayMaxSize,
   ArrayNotEmpty,
   ArrayUnique,
   IsArray,
@@ -37,7 +36,6 @@ export class CreateItineraryDto {
   @Transform(upperCodes)
   @IsArray()
   @ArrayNotEmpty({ message: 'Select at least one country' })
-  @ArrayMaxSize(20)
   @ArrayUnique()
   @IsString({ each: true })
   countries!: string[];
