@@ -79,6 +79,9 @@ export class ItinerariesService {
       await this.assertCountriesExist(dto.countries);
       itinerary.countries = dto.countries;
     }
+    if (Object.values(dto).some((value) => value === null)) {
+      throw new BadRequestException('Itinerary fields must not be null');
+    }
     if (dto.title !== undefined) itinerary.title = dto.title;
     if (dto.startDate !== undefined) itinerary.startDate = new Date(dto.startDate);
     if (dto.visibility !== undefined) itinerary.visibility = dto.visibility;
