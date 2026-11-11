@@ -1,0 +1,10 @@
+================================================
+Date: 2026-11-11
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Prompt:
+Wrote the itinerary schema, DTOs, service and controller for ITN-01 in NestJS, following the existing auth and reference-data code style.
+How the output was used:
+Used as the base for the itineraries module. I reviewed it and tested all endpoints in Swagger.
+================================================
