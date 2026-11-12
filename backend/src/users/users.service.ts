@@ -1,12 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
+import { ReferenceDataService } from '../reference-data/reference-data.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    private readonly referenceData: ReferenceDataService,
   ) {}
 
   findByEmail(email: string) {
@@ -88,5 +95,98 @@ export class UsersService {
       { refreshTokenHash: newHash },
       { new: true },
     );
+  }
+
+  // Change password: the hash is hidden by default, so it must be requested
+  // explicitly (ACC-08)
+  findByIdWithPassword(id: string) {
+    return this.userModel.findById(id).select('+passwordHash');
+  }
+
+  // Stores the new password hash, ends the temporary-password state and
+  // replaces the refresh token, so every older refresh token stops working
+  // (ACC-08, ACC-07a)
+  updatePassword(id: string, passwordHash: string, refreshTokenHash: string) {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      { passwordHash, mustChangePassword: false, refreshTokenHash },
+      { new: true },
+    );
+  }
+
+  // GET /users/me (ACC-09)
+  async getProfile(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+    return this.toProfile(user);
+  }
+
+  // PATCH /users/me (ACC-09): name, phone and preferred currency. Nothing is
+  // written unless every field that was sent is valid.
+  async updateProfile(id: string, dto: UpdateProfileDto) {
+    const set: Record<string, string> = {};
+    const unset: Record<string, 1> = {};
+
+    if (dto.name !== undefined) {
+      set.name = dto.name;
+    }
+    if (dto.phone === null) {
+      unset.phone = 1; // an empty phone removes it
+    } else if (dto.phone !== undefined) {
+      set.phone = dto.phone;
+    }
+    if (dto.preferredCurrency !== undefined) {
+      const supported = await this.referenceData.isSupportedCurrency(
+        dto.preferredCurrency,
+      );
+      if (!supported) {
+        const list = await this.referenceData.getSupportedCurrencies();
+        throw new BadRequestException([
+          `preferredCurrency must be one of: ${list.join(', ')}`,
+        ]);
+      }
+      set.preferredCurrency = dto.preferredCurrency;
+    }
+
+    if (Object.keys(set).length === 0 && Object.keys(unset).length === 0) {
+      throw new BadRequestException([
+        'Provide at least one field to update: name, phone or preferredCurrency',
+      ]);
+    }
+
+    const update: UpdateQuery<UserDocument> = {};
+    if (Object.keys(set).length > 0) {
+      update.$set = set;
+    }
+    if (Object.keys(unset).length > 0) {
+      update.$unset = unset;
+    }
+    const user = await this.userModel.findByIdAndUpdate(id, update, {
+      new: true,
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+    return this.toProfile(user);
+  }
+
+  // Only what the profile page needs. Password hash, lockout and token fields
+  // are never returned.
+  private toProfile(user: UserDocument) {
+    return {
+      id: user.id as string,
+      name: user.name,
+      email: user.email,
+      phone: user.phone ?? null,
+      role: user.role,
+      status: user.status,
+      assignedProviderId: user.assignedProviderId
+        ? user.assignedProviderId.toString()
+        : null,
+      preferredCurrency: user.preferredCurrency,
+      mustChangePassword: user.mustChangePassword,
+    };
   }
 }

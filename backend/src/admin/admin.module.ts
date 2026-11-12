@@ -1,4 +1,23 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
+import { AdminAccountsController } from './admin-accounts.controller';
+import { AdminAccountsService } from './admin-accounts.service';
+import { AdminSeeder } from './admin.seeder';
+import { AuditLogService } from './audit-log.service';
+import { AuditLogsController } from './audit-logs.controller';
+import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
 
-@Module({})
+// Administration. UsersModule exports the User model, so no second User schema.
+@Module({
+  imports: [
+    UsersModule,
+    NotificationsModule,
+    MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
+  ],
+  controllers: [AdminAccountsController, AuditLogsController],
+  providers: [AdminAccountsService, AuditLogService, AdminSeeder],
+  exports: [AuditLogService],
+})
 export class AdminModule {}
