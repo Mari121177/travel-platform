@@ -27,6 +27,8 @@ import {
   RoomNightStatus,
 } from './hotel-booking.constants';
 import { HotelsService } from '../hotels/hotels.service';
+import { NotificationType } from '../notifications/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { PayableBooking } from './ports/hotel-booking.port';
 import type { PaymentsPort } from './ports/payments.port';
 import { PAYMENTS_PORT } from './ports/payments.port';
@@ -47,6 +49,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     @InjectConnection() private readonly connection: Connection,
     // circular with HotelsService (it calls our helpers): forwardRef on both sides
     @Inject(forwardRef(() => HotelsService)) private readonly hotels: HotelsService,
+    private readonly notifications: NotificationsService, // send() never throws
     // provided by payments (member 7); optional so we work before it is merged
     @Optional() @Inject(PAYMENTS_PORT) private readonly payments?: PaymentsPort,
   ) {}
@@ -253,7 +256,12 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
         { session },
       );
     });
-    // TODO(member 7): create in-app notification with reservation details (GEN-01)
+    await this.notifications.send(
+      booking.userId,
+      NotificationType.BOOKING_CONFIRMED,
+      `Your reservation ${booking.reference} at ${booking.hotelName} is confirmed (${booking.checkIn} to ${booking.checkOut}).`,
+      { bookingType: 'hotel', bookingId: String(booking._id), reference: booking.reference },
+    );
     return this.toView(booking);
   }
 
@@ -380,7 +388,19 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`refund failed for ${String(booking._id)}`, e);
       }
     }
-    // TODO(member 7, after notifications PR): cancellation/refund notification (GEN-01)
+    await this.notifications.send(
+      booking.userId,
+      NotificationType.BOOKING_CANCELLED,
+      refund.refundAmount > 0
+        ? `Your reservation${booking.reference ? ` ${booking.reference}` : ''} at ${booking.hotelName} was cancelled. A refund of ${refund.refundAmount} is being processed.`
+        : `Your reservation${booking.reference ? ` ${booking.reference}` : ''} at ${booking.hotelName} was cancelled. No refund applies under the hotel's policy.`,
+      {
+        bookingType: 'hotel',
+        bookingId: String(booking._id),
+        refundAmount: refund.refundAmount,
+        refundPercent: refund.refundPercent,
+      },
+    );
     return { booking: this.toView(booking), refund: { ...refund, refundId } };
   }
 
