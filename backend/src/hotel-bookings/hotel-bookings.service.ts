@@ -29,6 +29,12 @@ import {
 import { HotelsService } from '../hotels/hotels.service';
 import { NotificationType } from '../notifications/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import type {
+  AdminBookingStatus,
+  AdminHotelBookingFilter,
+  AdminHotelBookingItem,
+  AdminHotelBookingPage,
+} from './ports/admin-bookings.types';
 import type { PayableBooking } from './ports/hotel-booking.port';
 import type { PaymentsPort } from './ports/payments.port';
 import { PAYMENTS_PORT } from './ports/payments.port';
@@ -542,7 +548,102 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     }));
   }
 
+  // ---- for admin (Mariam): ACC-17 list, ACC-15 notification recipients ----
+
+  /** ACC-17: all hotel reservations, newest first, filter by status and createdAt range, 10 per page. */
+  async listAllForAdmin(filter: AdminHotelBookingFilter = {}): Promise<AdminHotelBookingPage> {
+    const page = filter.page && filter.page >= 1 ? Math.floor(filter.page) : 1;
+    const today = todayString();
+    const query: Record<string, unknown> = {};
+
+    if (filter.status !== undefined) {
+      const allowed: string[] = [...Object.values(BookingStatus), 'Completed'];
+      if (!allowed.includes(filter.status)) {
+        throw new BadRequestException(`status must be one of: ${allowed.join(', ')}`);
+      }
+      if (filter.status === 'Completed') {
+        query.status = BookingStatus.Confirmed;
+        query.checkOut = { $lt: today };
+      } else if (filter.status === BookingStatus.Confirmed) {
+        query.status = BookingStatus.Confirmed;
+        query.checkOut = { $gte: today }; // past stays are listed as Completed
+      } else {
+        query.status = filter.status;
+      }
+    }
+
+    const createdAt: Record<string, Date> = {};
+    if (filter.from) createdAt.$gte = this.parseBoundary(filter.from, 'from', false);
+    if (filter.to) createdAt.$lte = this.parseBoundary(filter.to, 'to', true);
+    if (createdAt.$gte && createdAt.$lte && createdAt.$gte > createdAt.$lte) {
+      throw new BadRequestException('from must not be after to');
+    }
+    if (createdAt.$gte || createdAt.$lte) query.createdAt = createdAt;
+
+    const [rows, total] = await Promise.all([
+      this.bookingModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
+        .select('reference userId hotelId hotelName checkIn checkOut totalPrice status createdAt')
+        .lean(),
+      this.bookingModel.countDocuments(query),
+    ]);
+
+    const data: AdminHotelBookingItem[] = (
+      rows as unknown as (HotelBooking & { _id: Types.ObjectId; createdAt: Date })[]
+    ).map((b) => ({
+      type: 'hotel',
+      bookingId: String(b._id),
+      reference: b.reference ?? null,
+      userId: String(b.userId),
+      hotelId: String(b.hotelId),
+      hotelName: b.hotelName,
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+      totalPrice: b.totalPrice,
+      status: (b.status === BookingStatus.Confirmed && b.checkOut < today
+        ? 'Completed'
+        : b.status) as AdminBookingStatus,
+      createdAt: b.createdAt,
+    }));
+    return { data, total, page, limit: PAGE_SIZE };
+  }
+
+  /**
+   * ACC-15: ids of users who hold Confirmed reservations at a hotel (to notify them when the
+   * hotel is deactivated). By default only reservations that have not ended yet
+   * (check-out today or later); pass onlyUpcoming = false to include finished stays too.
+   */
+  async getUserIdsWithConfirmedBookings(
+    hotelId: string,
+    onlyUpcoming = true,
+    session?: ClientSession,
+  ): Promise<string[]> {
+    const match: Record<string, unknown> = {
+      hotelId: oid(hotelId),
+      status: BookingStatus.Confirmed,
+    };
+    if (onlyUpcoming) match.checkOut = { $gte: todayString() };
+    const rows = await this.bookingModel
+      .aggregate<{ _id: Types.ObjectId }>([{ $match: match }, { $group: { _id: '$userId' } }])
+      .session(session ?? null);
+    return rows.map((r) => String(r._id));
+  }
+
   // ---- private ----
+  /** "YYYY-MM-DD" -> start/end of that UTC day; otherwise any valid ISO date-time. */
+  private parseBoundary(value: string, field: string, endOfDay: boolean): Date {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      if (!isValidDateString(value)) throw new BadRequestException(`${field} is not a valid date`);
+      return new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`);
+    }
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) throw new BadRequestException(`${field} is not a valid date`);
+    return d;
+  }
+
   private assertStayDates(checkIn: string, checkOut: string) {
     if (!isValidDateString(checkIn) || !isValidDateString(checkOut)) {
       throw new BadRequestException('Dates must be valid YYYY-MM-DD values');
