@@ -454,6 +454,25 @@ export class HotelsService {
       throw new NotFoundException('Hotel not found');
     }
   }
+   // ---------------------------------------------------------------
+  // ACC-15: admin deactivates / reactivates a hotel (called by the admin module).
+  // Existing Confirmed bookings stay valid; the hotel is just hidden and unbookable.
+  // ---------------------------------------------------------------
+
+  async setHotelActive(hotelId: string, isActive: boolean): Promise<HotelDocument> {
+    if (!isValidObjectId(hotelId)) {
+      throw new BadRequestException('Invalid hotel id');
+    }
+    const hotel = await this.hotelModel.findByIdAndUpdate(
+      hotelId,
+      { $set: { isActive } },
+      { new: true },
+    );
+    if (!hotel) {
+      throw new NotFoundException('Hotel not found');
+    }
+    return hotel;
+  }
 
   // ===============================================================
   // Helpers (private = only usable inside this class)
@@ -518,7 +537,7 @@ export class HotelsService {
       );
     }
   }
-  
+
   // NEW (calendars): which list a kind is stored in
   private fieldFor(kind: RangeKind): 'availabilityRanges' | 'blockedRanges' {
     return kind === 'available' ? 'availabilityRanges' : 'blockedRanges';
