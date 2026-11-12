@@ -3,7 +3,7 @@ import {
   NotFoundException, forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, isValidObjectId, Model } from 'mongoose';
+import { ClientSession, isValidObjectId, Model, Types } from 'mongoose';
 import { HotelBookingsService } from '../hotel-bookings/hotel-bookings.service';
 import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
@@ -14,11 +14,16 @@ import { CreateHotelDto } from './dto/create-hotel.dto';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { UpdateHotelPoliciesDto } from './dto/update-hotel-policies.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { UpdateRoomDto } from './dto/update-room.dto'; // NEW (step 2)
+import { UpdateRoomDto } from './dto/update-room.dto';
+import { DateRangeDto } from './dto/date-range.dto'; // NEW (calendars)
+import { UpdateDateRangeDto } from './dto/update-date-range.dto'; // NEW (calendars)
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_VIEW_NIGHTS = 31; // NEW (calendars): status view is limited to 31 nights
 
 type NightRange = { start: string; end: string }; // inclusive nights
+type StoredRange = NightRange & { _id: Types.ObjectId }; // NEW (calendars): a saved range has an _id
+type RangeKind = 'available' | 'blocked'; // NEW (calendars)
 
 // "2026-11-10" + 1 -> "2026-11-11". UTC so time zones can't shift the date.
 function addDays(date: string, days: number): string {
@@ -120,7 +125,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (step 2) — HTL-05 + HTL-06: moderator edits or deactivates a room
+  // HTL-05 + HTL-06: moderator edits or deactivates a room
   // ===============================================================
   async updateRoom(
     hotelId: string,
@@ -155,7 +160,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (step 2) — HTL-06: moderator deletes a room (only if never reserved)
+  // HTL-06: moderator deletes a room (only if never reserved)
   // ===============================================================
   async deleteRoom(hotelId: string, roomId: string, user: AuthUser): Promise<void> {
     const hotel = await this.getHotelOrThrow(hotelId);
@@ -168,6 +173,196 @@ export class HotelsService {
       );
     }
     await this.roomModel.deleteOne({ _id: roomId });
+  }
+
+  // ===============================================================
+  // NEW (calendars) — HTL-04 + HTL-06: add an open or blocked range
+  // ===============================================================
+  async addRange(
+    hotelId: string,
+    roomId: string,
+    dto: DateRangeDto,
+    user: AuthUser,
+  ): Promise<RoomDocument> {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    await this.getRoomOrThrow(hotel, roomId);
+    this.assertValidRange(dto.start, dto.end);
+
+    // Blocking is rejected if a guest has these nights (Confirmed or on hold)
+    if (dto.kind === 'blocked') {
+      const busy = await this.hotelBookingsService.hasOverlappingReservation(
+        roomId, dto.start, dto.end,
+      );
+      if (busy) {
+        throw new ConflictException(
+          'These nights have Confirmed or Pending Payment reservations and cannot be blocked',
+        );
+      }
+    }
+
+    // Check "no overlap with the same kind" and save in ONE atomic step
+    const field = this.fieldFor(dto.kind);
+    const filter: Record<string, unknown> = {
+      _id: roomId,
+      [field]: {
+        $not: { $elemMatch: { start: { $lte: dto.end }, end: { $gte: dto.start } } },
+      },
+    };
+    const update: Record<string, unknown> = {
+      $push: { [field]: { start: dto.start, end: dto.end } },
+    };
+    const updated = await this.roomModel.findOneAndUpdate(filter, update, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) {
+      throw new ConflictException(`This range overlaps another ${dto.kind} range of this room`);
+    }
+    return updated;
+  }
+
+  // ===============================================================
+  // NEW (calendars) — HTL-05 + HTL-06: move or resize a range
+  // ===============================================================
+  async updateRange(
+    hotelId: string,
+    roomId: string,
+    rangeId: string,
+    dto: UpdateDateRangeDto,
+    user: AuthUser,
+  ): Promise<RoomDocument> {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    const room = await this.getRoomOrThrow(hotel, roomId);
+    const { kind, range } = this.findRange(room, rangeId);
+
+    const start = dto.start ?? range.start;
+    const end = dto.end ?? range.end;
+    this.assertValidRange(start, end);
+
+    // No overlap with the OTHER ranges of the same kind
+    const others = this.rangesOf(room, kind).filter((r) => String(r._id) !== rangeId);
+    if (others.some((r) => this.overlaps(r, start, end))) {
+      throw new ConflictException(`This range overlaps another ${kind} range of this room`);
+    }
+
+    if (kind === 'available') {
+      // Shrinking: nights that are no longer open must not have Confirmed reservations (HTL-05)
+      for (const part of this.removedParts(range, { start, end })) {
+        if (await this.hotelBookingsService.hasConfirmedReservations(roomId, part.start, part.end)) {
+          throw new ConflictException(
+            `Nights ${part.start} to ${part.end} have Confirmed reservations and must stay open`,
+          );
+        }
+      }
+    } else {
+      // Blocking (possibly new) nights: no guest may have them (HTL-06)
+      if (await this.hotelBookingsService.hasOverlappingReservation(roomId, start, end)) {
+        throw new ConflictException(
+          'These nights have Confirmed or Pending Payment reservations and cannot be blocked',
+        );
+      }
+    }
+
+    const field = this.fieldFor(kind);
+    const update: Record<string, unknown> = {
+      $set: { [`${field}.$.start`]: start, [`${field}.$.end`]: end },
+    };
+    const updated = await this.roomModel.findOneAndUpdate(
+      { _id: roomId, [`${field}._id`]: rangeId } as Record<string, unknown>,
+      update,
+      { new: true, runValidators: true },
+    );
+    return updated!;
+  }
+
+  // ===============================================================
+  // NEW (calendars) — HTL-05 + HTL-06: remove a range
+  // ===============================================================
+  async removeRange(
+    hotelId: string,
+    roomId: string,
+    rangeId: string,
+    user: AuthUser,
+  ): Promise<RoomDocument> {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    const room = await this.getRoomOrThrow(hotel, roomId);
+    const { kind, range } = this.findRange(room, rangeId);
+
+    // Removing OPEN nights: rejected if any have Confirmed reservations (HTL-05).
+    // Removing a BLOCK is always fine: it only makes nights sellable again.
+    if (kind === 'available') {
+      if (await this.hotelBookingsService.hasConfirmedReservations(roomId, range.start, range.end)) {
+        throw new ConflictException(
+          'This range has Confirmed reservations and cannot be removed',
+        );
+      }
+    }
+
+    const field = this.fieldFor(kind);
+    const update: Record<string, unknown> = {
+      $pull: { [field]: { _id: new Types.ObjectId(rangeId) } },
+    };
+    const updated = await this.roomModel.findByIdAndUpdate(roomId, update, { new: true });
+    return updated!;
+  }
+
+  // ===============================================================
+  // NEW (calendars) — HTL-08: each room's status per night
+  // ===============================================================
+  async getAvailabilityView(hotelId: string, from: string, to: string, user: AuthUser) {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    if (to < from) {
+      throw new BadRequestException('"to" must be on or after "from"');
+    }
+
+    // List every night from "from" to "to" (inclusive), max 31
+    const nights: string[] = [];
+    for (let d = from; d <= to; d = addDays(d, 1)) {
+      nights.push(d);
+      if (nights.length > MAX_VIEW_NIGHTS) {
+        throw new BadRequestException(`The range can be at most ${MAX_VIEW_NIGHTS} nights`);
+      }
+    }
+
+    const rooms = await this.roomModel
+      .find({ hotelId: hotel._id })
+      .sort({ roomNumber: 1 })
+      .lean();
+
+    // Ask member 6 ONCE for every taken night in this hotel, then index by "roomId|date"
+    const booked = await this.hotelBookingsService.getHotelBookedNights(hotelId, from, to);
+    const bookedMap = new Map(booked.map((b) => [`${b.roomId}|${b.date}`, b]));
+
+    return {
+      hotelId,
+      from,
+      to,
+      rooms: rooms.map((room) => ({
+        roomId: String(room._id),
+        roomNumber: room.roomNumber,
+        type: room.type,
+        isActive: room.isActive,
+        nights: nights.map((date) => {
+          const b = bookedMap.get(`${String(room._id)}|${date}`);
+          if (b) {
+            // Booked wins: a real guest matters more than a calendar mark
+            return { date, status: 'Booked', reference: b.reference, bookingStatus: b.status };
+          }
+          if (this.containsNight(room.blockedRanges, date)) {
+            return { date, status: 'Blocked' };
+          }
+          if (room.isActive && this.containsNight(room.availabilityRanges, date)) {
+            return { date, status: 'Available' };
+          }
+          // Not open, or room deactivated: not sellable -> shown as Blocked
+          return { date, status: 'Blocked' };
+        }),
+      })),
+    };
   }
 
   // ---------------------------------------------------------------
@@ -288,7 +483,7 @@ export class HotelsService {
     return hotel;
   }
 
-  // NEW (step 2): room must exist AND belong to this hotel
+  // Room must exist AND belong to this hotel
   // (stops a moderator editing another hotel's room through their own hotel's URL)
   private async getRoomOrThrow(hotel: HotelDocument, roomId: string): Promise<RoomDocument> {
     if (!isValidObjectId(roomId)) {
@@ -308,6 +503,61 @@ export class HotelsService {
       throw new BadRequestException(`Unknown cityId "${cityId}"`);
     }
     return city.countryCode;
+  }
+
+  // NEW (calendars): start <= end, and not entirely in the past
+  private assertValidRange(start: string, end: string): void {
+    if (end < start) {
+      throw new BadRequestException(
+        'The end date must be on or after the start date.',
+      );
+    }
+    if (end < todayUtc()) {
+      throw new BadRequestException(
+        'These dates are in the past. Please choose dates from today onwards.',
+      );
+    }
+  }
+  
+  // NEW (calendars): which list a kind is stored in
+  private fieldFor(kind: RangeKind): 'availabilityRanges' | 'blockedRanges' {
+    return kind === 'available' ? 'availabilityRanges' : 'blockedRanges';
+  }
+
+  // NEW (calendars): the saved ranges of one kind, with their _id
+  private rangesOf(room: RoomDocument, kind: RangeKind): StoredRange[] {
+    return room[this.fieldFor(kind)] as unknown as StoredRange[];
+  }
+
+  // NEW (calendars): find a range by id in either list -> tells us its kind
+  private findRange(room: RoomDocument, rangeId: string): { kind: RangeKind; range: StoredRange } {
+    if (!isValidObjectId(rangeId)) {
+      throw new BadRequestException('Invalid range id');
+    }
+    for (const kind of ['available', 'blocked'] as const) {
+      const range = this.rangesOf(room, kind).find((r) => String(r._id) === rangeId);
+      if (range) return { kind, range };
+    }
+    throw new NotFoundException('Range not found for this room');
+  }
+
+  // NEW (calendars): nights in "old" that are NOT in "next" (up to 2 pieces: left and right)
+  private removedParts(old: NightRange, next: NightRange): NightRange[] {
+    const parts: NightRange[] = [];
+    if (old.start < next.start) {
+      const end = addDays(next.start, -1) < old.end ? addDays(next.start, -1) : old.end;
+      parts.push({ start: old.start, end });
+    }
+    if (old.end > next.end) {
+      const start = addDays(next.end, 1) > old.start ? addDays(next.end, 1) : old.start;
+      parts.push({ start, end: old.end });
+    }
+    return parts;
+  }
+
+  // NEW (calendars): is this one night inside any of the ranges?
+  private containsNight(ranges: NightRange[], date: string): boolean {
+    return ranges.some((r) => r.start <= date && date <= r.end);
   }
 
   // Two inclusive ranges overlap if each starts before the other ends

@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put,
+  Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
@@ -13,6 +13,9 @@ import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { UpdateHotelPoliciesDto } from './dto/update-hotel-policies.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { DateRangeDto } from './dto/date-range.dto';
+import { UpdateDateRangeDto } from './dto/update-date-range.dto';
+import { AvailabilityQueryDto } from './dto/availability-query.dto';
 
 @ApiTags('Hotels')
 @Controller('hotels')
@@ -57,6 +60,17 @@ export class HotelsController {
     return this.hotelsService.updatePolicies(id, dto, user);
   }
 
+  // NEW (calendars) — GET /api/hotels/:id/availability?from=&to=  (HTL-08)
+  @Roles(Role.HotelModerator)
+  @Get(':id/availability')
+  availabilityView(
+    @Param('id') id: string,
+    @Query() query: AvailabilityQueryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.hotelsService.getAvailabilityView(id, query.from, query.to, user);
+  }
+
   // POST /api/hotels/:id/rooms  (HTL-03)
   @Roles(Role.HotelModerator)
   @Post(':id/rooms')
@@ -68,7 +82,7 @@ export class HotelsController {
     return this.hotelsService.createRoom(id, dto, user);
   }
 
-  // NEW (step 2) — PATCH /api/hotels/:id/rooms/:roomId  (HTL-05, HTL-06)
+  // PATCH /api/hotels/:id/rooms/:roomId  (HTL-05, HTL-06) — edit or deactivate
   @Roles(Role.HotelModerator)
   @Patch(':id/rooms/:roomId')
   updateRoom(
@@ -80,7 +94,7 @@ export class HotelsController {
     return this.hotelsService.updateRoom(id, roomId, dto, user);
   }
 
-  // NEW (step 2) — DELETE /api/hotels/:id/rooms/:roomId  (HTL-06), never-reserved rooms only
+  // DELETE /api/hotels/:id/rooms/:roomId  (HTL-06) — only never-reserved rooms
   @Roles(Role.HotelModerator)
   @Delete(':id/rooms/:roomId')
   @HttpCode(204)
@@ -90,5 +104,42 @@ export class HotelsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.hotelsService.deleteRoom(id, roomId, user);
+  }
+
+  // NEW (calendars) — POST /api/hotels/:id/rooms/:roomId/availability  (HTL-04, HTL-06)
+  @Roles(Role.HotelModerator)
+  @Post(':id/rooms/:roomId/availability')
+  addRange(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Body() dto: DateRangeDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.hotelsService.addRange(id, roomId, dto, user);
+  }
+
+  // NEW (calendars) — PATCH /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
+  @Roles(Role.HotelModerator)
+  @Patch(':id/rooms/:roomId/availability/:rangeId')
+  updateRange(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Param('rangeId') rangeId: string,
+    @Body() dto: UpdateDateRangeDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.hotelsService.updateRange(id, roomId, rangeId, dto, user);
+  }
+
+  // NEW (calendars) — DELETE /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
+  @Roles(Role.HotelModerator)
+  @Delete(':id/rooms/:roomId/availability/:rangeId')
+  removeRange(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Param('rangeId') rangeId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.hotelsService.removeRange(id, roomId, rangeId, user);
   }
 }
