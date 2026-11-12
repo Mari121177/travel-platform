@@ -44,3 +44,15 @@ Reviewed the updated controller, merged develop into my branch, and tested in
 Swagger: 401 when logged out, 200 after login. Coordinated the payments
 contract with member 6.
 ================================================
+
+================================================
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-08
+Category: Code generation
+Prompt:
+Wrote the image upload module for GEN-08: a POST /api/uploads/images endpoint with JPG/PNG validation, a real file signature check, random file names, and serving the saved files at /uploads from the uploads module itself.
+How the output was used:
+Used as the base for the uploads module. I reviewed it and tested it in Swagger with a valid PNG (201), a PDF, a text file and a fake PNG (all 400), a logged-out request (401), and opened a saved image by its URL.
+================================================
