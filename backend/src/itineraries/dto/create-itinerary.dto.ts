@@ -30,7 +30,7 @@ export class CreateItineraryDto {
   title!: string;
 
   @ApiProperty({
-    example: ['FR', 'IT'],
+    example: ['DE'],
     description: 'Country codes from the seeded countries collection',
   })
   @Transform(upperCodes)

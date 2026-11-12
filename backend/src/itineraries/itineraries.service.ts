@@ -44,7 +44,7 @@ export class ItinerariesService {
   // ITN-03: the logged-in user's own itineraries
   async findMine(userId: string, query: ListItinerariesQueryDto) {
     const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+    const limit = 10;
     const filter = { ownerId: userId };
 
     const [items, total] = await Promise.all([
@@ -66,21 +66,21 @@ export class ItinerariesService {
       itinerary.visibility === ItineraryVisibility.Private &&
       itinerary.ownerId.toString() !== user.id
     ) {
-      throw new ForbiddenException('This itinerary is private');
+      throw new NotFoundException('Itinerary not found');
     }
     return itinerary;
   }
 
   // ITN-01 edit, ITN-20 visibility
   async update(id: string, user: AuthUser, dto: UpdateItineraryDto) {
+    if (Object.values(dto).some((value) => value === null)) {
+      throw new BadRequestException('Itinerary fields must not be null');
+    }
     const itinerary = await this.getOwnedOrFail(id, user);
 
     if (dto.countries) {
       await this.assertCountriesExist(dto.countries);
       itinerary.countries = dto.countries;
-    }
-    if (Object.values(dto).some((value) => value === null)) {
-      throw new BadRequestException('Itinerary fields must not be null');
     }
     if (dto.title !== undefined) itinerary.title = dto.title;
     if (dto.startDate !== undefined) itinerary.startDate = new Date(dto.startDate);
@@ -114,6 +114,9 @@ export class ItinerariesService {
   ): Promise<ItineraryDocument> {
     const itinerary = await this.getOrFail(id);
     if (itinerary.ownerId.toString() !== user.id) {
+      if (itinerary.visibility === ItineraryVisibility.Private) {
+        throw new NotFoundException('Itinerary not found');
+      }
       throw new ForbiddenException('You do not own this itinerary');
     }
     return itinerary;

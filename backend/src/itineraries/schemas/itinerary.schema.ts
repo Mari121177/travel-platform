@@ -38,7 +38,10 @@ export class Itinerary {
     default: ItineraryVisibility.Private,
   })
   visibility!: ItineraryVisibility;
-
+  // Placeholder until ITN-05 defines the day structure
+  @Prop({ type: [SchemaTypes.Mixed], default: [] })
+  days!: unknown[];
+  
   createdAt?: Date;
   updatedAt?: Date;
 }
