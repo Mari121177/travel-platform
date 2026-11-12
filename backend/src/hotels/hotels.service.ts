@@ -1,11 +1,6 @@
 import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  forwardRef,
+  BadRequestException, ConflictException, ForbiddenException, Inject, Injectable,
+  NotFoundException, forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, isValidObjectId, Model } from 'mongoose';
@@ -19,6 +14,7 @@ import { CreateHotelDto } from './dto/create-hotel.dto';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { UpdateHotelPoliciesDto } from './dto/update-hotel-policies.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto'; // NEW (step 2)
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -58,11 +54,7 @@ export class HotelsService {
   // ===============================================================
   // HTL-01: moderator edits their hotel's profile
   // ===============================================================
-  async updateHotel(
-    hotelId: string,
-    dto: UpdateHotelDto,
-    user: AuthUser,
-  ): Promise<HotelDocument> {
+  async updateHotel(hotelId: string, dto: UpdateHotelDto, user: AuthUser): Promise<HotelDocument> {
     const hotel = await this.getHotelOrThrow(hotelId);
     this.assertCanManageHotel(user, hotel);
 
@@ -112,11 +104,7 @@ export class HotelsService {
   // ===============================================================
   // HTL-03: moderator adds a room to their hotel
   // ===============================================================
-  async createRoom(
-    hotelId: string,
-    dto: CreateRoomDto,
-    user: AuthUser,
-  ): Promise<RoomDocument> {
+  async createRoom(hotelId: string, dto: CreateRoomDto, user: AuthUser): Promise<RoomDocument> {
     const hotel = await this.getHotelOrThrow(hotelId);
     this.assertCanManageHotel(user, hotel);
 
@@ -125,12 +113,61 @@ export class HotelsService {
     } catch (err) {
       // 11000 = duplicate key -> roomNumber already used in this hotel
       if ((err as { code?: number })?.code === 11000) {
-        throw new ConflictException(
-          `Room "${dto.roomNumber}" already exists in this hotel`,
-        );
+        throw new ConflictException(`Room "${dto.roomNumber}" already exists in this hotel`);
       }
       throw err;
     }
+  }
+
+  // ===============================================================
+  // NEW (step 2) — HTL-05 + HTL-06: moderator edits or deactivates a room
+  // ===============================================================
+  async updateRoom(
+    hotelId: string,
+    roomId: string,
+    dto: UpdateRoomDto,
+    user: AuthUser,
+  ): Promise<RoomDocument> {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    const room = await this.getRoomOrThrow(hotel, roomId);
+
+    // Deactivating: rejected if any Confirmed / Pending Payment reservation
+    // from today onwards uses this room (HTL-06)
+    if (dto.isActive === false && room.isActive) {
+      const busy = await this.hotelBookingsService.hasOverlappingReservation(
+        roomId, todayUtc(), '9999-12-31',
+      );
+      if (busy) {
+        throw new ConflictException(
+          'Room has upcoming Confirmed or Pending Payment reservations and cannot be deactivated',
+        );
+      }
+    }
+
+    // Price changes don't affect existing reservations: bookings store their own price (HTL-05)
+    const updated = await this.roomModel.findByIdAndUpdate(
+      roomId,
+      { $set: { ...dto } },
+      { new: true, runValidators: true },
+    );
+    return updated!;
+  }
+
+  // ===============================================================
+  // NEW (step 2) — HTL-06: moderator deletes a room (only if never reserved)
+  // ===============================================================
+  async deleteRoom(hotelId: string, roomId: string, user: AuthUser): Promise<void> {
+    const hotel = await this.getHotelOrThrow(hotelId);
+    this.assertCanManageHotel(user, hotel);
+    await this.getRoomOrThrow(hotel, roomId);
+
+    if (await this.hotelBookingsService.wasEverReserved(roomId)) {
+      throw new ConflictException(
+        'Room has reservations and cannot be deleted. Deactivate it instead.',
+      );
+    }
+    await this.roomModel.deleteOne({ _id: roomId });
   }
 
   // ---------------------------------------------------------------
@@ -151,16 +188,11 @@ export class HotelsService {
   // ---------------------------------------------------------------
   // For member 6: load several rooms at once (works inside their transaction)
   // ---------------------------------------------------------------
-  async findRoomsByIds(
-    roomIds: string[],
-    session?: ClientSession,
-  ): Promise<RoomDocument[]> {
+  async findRoomsByIds(roomIds: string[], session?: ClientSession): Promise<RoomDocument[]> {
     if (!roomIds.every((id) => isValidObjectId(id))) {
       throw new BadRequestException('Invalid room id');
     }
-    return this.roomModel
-      .find({ _id: { $in: roomIds } })
-      .session(session ?? null);
+    return this.roomModel.find({ _id: { $in: roomIds } }).session(session ?? null);
   }
 
   // ---------------------------------------------------------------
@@ -195,25 +227,18 @@ export class HotelsService {
     const room = await this.roomModel.findById(roomId).session(session ?? null);
     if (!room || !room.isActive) return false;
 
-    const hotel = await this.hotelModel
-      .findById(room.hotelId)
-      .session(session ?? null);
+    const hotel = await this.hotelModel.findById(room.hotelId).session(session ?? null);
     if (!hotel || !hotel.isActive) return false;
 
     // 4. Every night must be inside a bookable range
-    if (!this.coversAllNights(room.availabilityRanges, firstNight, lastNight))
-      return false;
+    if (!this.coversAllNights(room.availabilityRanges, firstNight, lastNight)) return false;
 
     // 5. No night may touch a blocked range
-    if (room.blockedRanges.some((r) => this.overlaps(r, firstNight, lastNight)))
-      return false;
+    if (room.blockedRanges.some((r) => this.overlaps(r, firstNight, lastNight))) return false;
 
     // 6. Not taken by a Confirmed booking or an unexpired hold (member 6's data)
     const taken = await this.hotelBookingsService.getTakenRoomIds(
-      [roomId],
-      firstNight,
-      lastNight,
-      session,
+      [roomId], firstNight, lastNight, session,
     );
     return taken.length === 0;
   }
@@ -222,11 +247,7 @@ export class HotelsService {
   // For member 6 (HTL-23): they compute the numbers, we store them.
   // Works for deactivated hotels too (reviews of past stays).
   // ---------------------------------------------------------------
-  async updateRating(
-    hotelId: string,
-    ratingAvg: number,
-    ratingCount: number,
-  ): Promise<void> {
+  async updateRating(hotelId: string, ratingAvg: number, ratingCount: number): Promise<void> {
     if (!isValidObjectId(hotelId)) {
       throw new BadRequestException('Invalid hotel id');
     }
@@ -267,6 +288,19 @@ export class HotelsService {
     return hotel;
   }
 
+  // NEW (step 2): room must exist AND belong to this hotel
+  // (stops a moderator editing another hotel's room through their own hotel's URL)
+  private async getRoomOrThrow(hotel: HotelDocument, roomId: string): Promise<RoomDocument> {
+    if (!isValidObjectId(roomId)) {
+      throw new BadRequestException('Invalid room id');
+    }
+    const room = await this.roomModel.findOne({ _id: roomId, hotelId: hotel._id });
+    if (!room) {
+      throw new NotFoundException('Room not found in this hotel');
+    }
+    return room;
+  }
+
   // City must exist in the seeded reference data (GEN-12); returns its country code
   private async resolveCountryCode(cityId: string): Promise<string> {
     const city = await this.cityModel.findOne({ cityId }).lean();
@@ -282,18 +316,14 @@ export class HotelsService {
   }
 
   // Do the ranges (together) cover every night from start to end?
-  private coversAllNights(
-    ranges: NightRange[],
-    start: string,
-    end: string,
-  ): boolean {
+  private coversAllNights(ranges: NightRange[], start: string, end: string): boolean {
     let next = start; // first night not covered yet
     const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
 
     for (const r of sorted) {
-      if (r.start > next) break; // gap before this range -> not covered
+      if (r.start > next) break;             // gap before this range -> not covered
       if (r.end >= next) next = addDays(r.end, 1);
-      if (next > end) return true; // passed the last night -> fully covered
+      if (next > end) return true;           // passed the last night -> fully covered
     }
     return false;
   }
