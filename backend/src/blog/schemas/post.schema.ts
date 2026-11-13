@@ -1,6 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
+import { POST_BODY_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from '../blog.constants';
 import { PostStatus } from '../post-status.enum';
+
+// The DTO counts characters (code points). Mongoose's maxlength counts UTF-16
+// units, so an emoji title could pass the DTO and then fail on save (500).
+// This validator counts code points too, so both layers agree.
+const maxCharacters = (max: number) => ({
+  validator: (value: string) => Array.from(value).length <= max,
+  message: `must be at most ${max} characters`,
+});
 
 export type PostDocument = HydratedDocument<Post>;
 
@@ -10,10 +19,20 @@ export class Post {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true })
   authorId!: Types.ObjectId;
 
-  @Prop({ type: String, required: true, trim: true, maxlength: 150 })
+  @Prop({
+    type: String,
+    required: true,
+    trim: true,
+    validate: maxCharacters(POST_TITLE_MAX_LENGTH),
+  })
   title!: string;
 
-  @Prop({ type: String, required: true, trim: true, maxlength: 20000 })
+  @Prop({
+    type: String,
+    required: true,
+    trim: true,
+    validate: maxCharacters(POST_BODY_MAX_LENGTH),
+  })
   body!: string;
 
   /** Lower-case, no duplicates, at most 5 (BLG-08). */
@@ -52,7 +71,8 @@ export class Post {
 export const PostSchema = SchemaFactory.createForClass(Post);
 
 // "My posts, newest first" (BLG-03)
-PostSchema.index({ authorId: 1, createdAt: -1 });
+// matches the sort in findMine (createdAt, then _id)
+PostSchema.index({ authorId: 1, createdAt: -1, _id: -1 });
 // Public list and tag pages (BLG-02, BLG-08)
 PostSchema.index({ status: 1, publishedAt: -1 });
 PostSchema.index({ tags: 1, status: 1, publishedAt: -1 });

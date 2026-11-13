@@ -33,9 +33,13 @@ import { UpdatePostDto } from './dto/update-post.dto';
 // request body.
 @ApiTags('Blog')
 @ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+@ApiUnauthorizedResponse({
+  description: 'Not logged in, or the session expired',
+})
 @Roles(Role.User)
-@ApiForbiddenResponse({ description: 'Only registered users can use blog posts' })
+@ApiForbiddenResponse({
+  description: 'Only registered users can use blog posts',
+})
 @Controller('posts')
 export class BlogController {
   constructor(private readonly blogService: BlogService) {}
@@ -71,7 +75,9 @@ export class BlogController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'BLG-04: edit my post (only the fields sent change)' })
+  @ApiOperation({
+    summary: 'BLG-04: edit my post (only the fields sent change)',
+  })
   @ApiOkResponse({ description: 'The updated post' })
   @ApiBadRequestResponse({ description: 'A field is invalid or null' })
   @ApiForbiddenResponse({ description: "Someone else's published post" })

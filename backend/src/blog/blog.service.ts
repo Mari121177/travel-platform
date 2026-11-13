@@ -37,6 +37,10 @@ export class BlogService {
   async findMine(authorId: string, query: ListMyPostsQueryDto) {
     const page = query.page ?? 1;
     const limit = BLOG_PAGE_SIZE;
+    // page=1e308 passes the DTO but makes the skip value Infinity
+    if (!Number.isSafeInteger((page - 1) * limit)) {
+      throw new BadRequestException('page is too large');
+    }
     const filter: Record<string, unknown> = {
       authorId: new Types.ObjectId(authorId),
     };
@@ -76,13 +80,26 @@ export class BlogService {
     if (dto.images !== undefined) post.images = dto.images;
     if (dto.status !== undefined) {
       post.status = dto.status;
-      // publishedAt records the first time the post was published
-      if (dto.status === PostStatus.Published && !post.publishedAt) {
-        post.publishedAt = new Date();
-      }
     }
+    await post.save();
 
-    return post.save();
+    // publishedAt records the first time the post was published. It is set
+    // with a conditional update (only while it is still null), so two
+    // publish requests at the same time cannot overwrite each other's date.
+    if (dto.status === PostStatus.Published && !post.publishedAt) {
+      await this.postModel
+        .updateOne(
+          { _id: post._id, publishedAt: null },
+          { $set: { publishedAt: new Date() } },
+        )
+        .exec();
+      const fresh = await this.postModel.findById(post._id).exec();
+      if (!fresh) {
+        throw new NotFoundException('Post not found');
+      }
+      return fresh;
+    }
+    return post;
   }
 
   /** BLG-04: the author deletes their own post. */

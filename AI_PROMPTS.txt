@@ -54,4 +54,5 @@ Prompt:
 Wrote the blog posts module: Post schema, DTOs with validation, service and controller for POST /api/posts, GET /api/posts/mine and PATCH and DELETE /api/posts/:id. Only the author can edit or delete a post (another user's draft gives 404, a published post gives 403), and null values in PATCH are rejected.
 How the output was used:
 Used as the base for the blog module. I reviewed it and tested it in Swagger: creating a draft and a published post (201), listing my posts, editing and publishing a draft (200), a bad image URL and a missing title (400), and deleting a post.
+After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
 ================================================
