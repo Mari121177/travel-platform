@@ -113,7 +113,29 @@ Diagnosed a DNS block on SRV lookups on my network; fixed it locally with a
 preload file outside the repo that sets Node's DNS servers. Added JWT_SECRET
 to my local .env. No project files changed.
 ================================================
+<<<<<<< Updated upstream
 
+=======
+Date: 2026-11-12
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-04, HTL-05, HTL-06, HTL-08
+
+Prompt:
+Explain the overall concept of room edit/deactivate/delete and the room
+availability calendar (open and blocked date ranges, status view), then write
+the code using the hotel-bookings helpers we agreed on and explain what each
+line does. Also give me test data to use in Swagger.
+
+How the output was used:
+Added updateRoom/deleteRoom (with a check that the room belongs to the hotel),
+add/edit/remove for open and blocked ranges with no-overlap rules (atomic
+$elemMatch check), checks against Confirmed and on-hold reservations via
+hasOverlappingReservation / hasConfirmedReservations / wasEverReserved, and a
+per-night status view. Used the test data to test the endpoints and role checks
+in Swagger myself, and rewrote some error messages to be clearer for users.
+================================================
+>>>>>>> Stashed changes
 Date: 2026-11-10
 Student: Hana
 Tool: Claude
