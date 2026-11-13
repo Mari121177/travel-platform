@@ -1,4 +1,126 @@
 ================================================
+Date: 2026-10-31
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01 to HTL-15 (planning)
+
+Prompt:
+Explain the project idea simply. Here is the team's task distribution;
+I am member 5 (Hotels, rooms, availability, policies). Which team members
+will I need to communicate with?
+
+How the output was used:
+Used to understand the overall platform and my module's scope, and to
+identify my dependencies: hotel bookings (member 6) for availability and
+reservations, and the team lead for auth, roles and seeded reference data.
+================================================
+Date: 2026-11-04
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-09, HTL-10
+
+Prompt:
+What should the schema, controller, service and module files in the hotels
+folder look like? Give me the code for each file one by one and explain
+what each part does. (Follow-up discussion on the format for check-in and
+check-out times.)
+
+How the output was used:
+Used to set up the hotels folder structure and as the first draft of
+hotel.schema.ts, room.schema.ts, hotels.module.ts, hotels.controller.ts and
+hotels.service.ts. Decided to store check-in/check-out times as "HH:mm"
+(24-hour) strings validated with a regex. The drafts were later reviewed
+and reworked (see entries from 2026-11-07).
+================================================
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-04, HTL-06, HTL-10
+
+Prompt:
+Review my Hotel and Room Mongoose schemas for the hotels module and explain
+each file step by step.
+
+How the output was used:
+Added date-range arrays (availability/blocked, inclusive last night) and
+indexes to Room, a cancellation-tier sub-schema to Hotel, and learned how
+schemas, services, controllers and modules fit together in NestJS.
+Later removed moderatorId and currency after the team decided the moderator
+link lives on the User and the platform uses one currency (PAY-04).
+================================================
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-05, HTL-06, HTL-09, HTL-10, GEN-02
+
+Prompt:
+Explain DTOs simply and write the DTOs for creating/updating hotels, rooms,
+policies and date ranges with class-validator.
+
+How the output was used:
+Created 6 DTOs. Used PartialType/PickType for update forms, ValidateNested +
+@Type for cancellation tiers, ArrayUnique for unique daysBefore, and kept
+server-controlled fields (countryCode, rating, isActive, hotelId) out of the
+DTOs to prevent mass assignment.
+================================================
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-04, HTL-06, HTL-15, HTL-18
+
+Prompt:
+Help me agree an interface with the hotel-bookings teammate and write
+checkRoomAvailability(roomId, checkIn, checkOut, session?).
+
+How the output was used:
+Implemented checkRoomAvailability (active room + hotel, every night inside
+an availability range, no blocked overlap, not in getTakenRoomIds),
+findRoomsByIds and updateRating. Used forwardRef for the circular dependency
+between HotelsModule and HotelBookingsModule.
+================================================
+Date: 2026-11-09
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-09, HTL-10, GEN-12, GEN-13
+
+Prompt:
+Update my hotels service and controller to use the team's auth skeleton
+(@Public, @Roles, @CurrentUser, AuthUser, Role, City model).
+
+How the output was used:
+Added createHotel, updateHotel, updatePolicies and createRoom with an
+ownership check (admin, or hotel_moderator whose assignedProviderId matches
+the hotel). Wrote the controller routes with @Roles/@Public, and looked up
+countryCode from the seeded City model. Duplicate room numbers return 409.
+================================================
+Date: 2026-11-10
+Student: Hana
+Tool: Claude
+Related Requirement: (setup)
+
+Prompt:
+Help me fix "querySrv ECONNREFUSED" when connecting to MongoDB Atlas, and
+the missing JWT_SECRET startup error.
+
+How the output was used:
+Diagnosed a DNS block on SRV lookups on my network; fixed it locally with a
+preload file outside the repo that sets Node's DNS servers. Added JWT_SECRET
+to my local .env. No project files changed.
+================================================
+Date: 2026-11-10
+Student: Hana
+Tool: Claude
+Related Requirement: (Git workflow)
+
+Prompt:
+Explain how to update my branch from develop without losing uncommitted
+work, and what git stash, merge and restore do.
+
+How the output was used:
+Backed up, stashed, pulled develop, merged it into my feature branch and
+restored my work. Reverted an accidental project-wide Prettier reformat so
+my commit only contains src/hotels.
+================================================
 Date: 2026-11-06
 Student: Habiba Ahmed
 Tool: Claude
