@@ -43,7 +43,7 @@ export class UploadsController {
   @ApiCreatedResponse({ type: UploadResponseDto })
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 },
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1, fields: 0 },
       fileFilter: (_req, file, callback) => {
         if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
           return callback(
