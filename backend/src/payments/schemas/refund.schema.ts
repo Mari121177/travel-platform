@@ -1,12 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { BookingType, RefundReason, RefundStatus } from '../enums/payment.enums';
+import { PLATFORM_CURRENCY } from '../payments.constants';
 
 export type RefundDocument = HydratedDocument<Refund>;
 
 /**
  * PAY-03: a refund issued through the Stripe Refunds API.
- * Created only when the refund amount is positive.
+ * Created only when the refund amount is positive. A refund that failed at
+ * Stripe is still saved (status Failed) so it can be retried.
  */
 @Schema({ timestamps: true, collection: 'refunds' })
 export class Refund {
@@ -26,7 +28,12 @@ export class Refund {
   amount!: number;
 
   /** PAY-04: always the single platform currency. */
-  @Prop({ type: String, required: true, uppercase: true, minlength: 3, maxlength: 3 })
+  @Prop({
+    type: String,
+    required: true,
+    enum: [PLATFORM_CURRENCY],
+    default: PLATFORM_CURRENCY,
+  })
   currency!: string;
 
   /** Shown on the booking details: Pending, Refunded or Failed. */
@@ -49,3 +56,6 @@ export class Refund {
 }
 
 export const RefundSchema = SchemaFactory.createForClass(Refund);
+
+// A booking can never be refunded twice.
+RefundSchema.index({ bookingType: 1, bookingId: 1 }, { unique: true });
