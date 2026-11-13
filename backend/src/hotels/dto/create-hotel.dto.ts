@@ -5,10 +5,12 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import { UPLOAD_URL_REGEX } from '../../uploads/upload.constants';
 
 // HTL-01: what an ADMIN may send when creating a hotel.
 // countryCode is NOT here: the service derives it from cityId.
@@ -36,7 +38,11 @@ export class CreateHotelDto {
   @IsArray()
   @ArrayMaxSize(5) // GEN-08: max 5 images per hotel
   @IsString({ each: true })
-  photos?: string[]; // URLs returned by the uploads module
+  @Matches(UPLOAD_URL_REGEX, {
+    each: true,
+    message: 'Each photo must be an image uploaded through /api/uploads/images.',
+  })
+  photos?: string[]; // URLs returned by the uploads module, e.g. "/uploads/<uuid>.jpg"
 
   @IsOptional()
   @IsInt()
