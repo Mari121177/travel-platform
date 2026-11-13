@@ -275,4 +275,5 @@ Wrote the blog posts module: Post schema, DTOs with validation, service and cont
 How the output was used:
 Used as the base for the blog module. I reviewed it and tested it in Swagger: creating a draft and a published post (201), listing my posts, editing and publishing a draft (200), a bad image URL and a missing title (400), and deleting a post.
 After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
+I also replaced the copied image URL pattern with the shared one from the uploads module.
 ================================================

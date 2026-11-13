@@ -13,13 +13,13 @@ import {
 } from 'class-validator';
 import {
   POST_BODY_MAX_LENGTH,
-  POST_IMAGE_URL_REGEX,
   POST_MAX_IMAGES,
   POST_MAX_TAGS,
   POST_TAG_MAX_LENGTH,
   POST_TITLE_MAX_LENGTH,
 } from '../blog.constants';
 import { PostStatus } from '../post-status.enum';
+import { UPLOAD_URL_REGEX } from '../../uploads/upload.constants';
 
 // Trims strings. Anything that is not a string is left alone so the
 // validators below reject it with a clear message.
@@ -79,7 +79,7 @@ export class CreatePostDto {
   @IsArray()
   @ArrayMaxSize(POST_MAX_IMAGES)
   @ArrayUnique()
-  @Matches(POST_IMAGE_URL_REGEX, {
+  @Matches(UPLOAD_URL_REGEX, {
     each: true,
     message: 'each image must be a URL returned by the upload endpoint',
   })
