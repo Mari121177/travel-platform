@@ -44,3 +44,69 @@ Reviewed the updated controller, merged develop into my branch, and tested in
 Swagger: 401 when logged out, 200 after login. Coordinated the payments
 contract with member 6.
 ================================================
+
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-17
+Category: Requirements analysis
+Prompt:
+I'm member 3 (flight search, filters, sorting, airports). I only want you
+to read the zip file and the project description. [Later: link to the
+requirements Excel sheet, "I didn't find FLT-13, 14, 16 or 18".]
+How the output was used:
+Claude summarized my module's scope and the rules in the requirements sheet
+(passenger types, infant fare, price filter, sorting, local airport time).
+I checked it against the Excel sheet [and the project PDF]. Found that
+FLT-13, 14, 16 and 18 don't exist in the sheet.
+================================================
+
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02 (not mine), FLT-11
+Category: Process / debugging
+Prompt:
+Where do I begin? And how should I approach this project? [Pasted Mariam's review
+comments on Malk's FLT-02 PR.]
+How the output was used:
+Claude explained the branch and commit workflow. After the review on Malk's
+PR, I realised FLT-02 belongs to her and moved to
+feature/FLT-11-flight-search. I applied the review lessons (DTO validation,
+@Public) to my own DTO.
+================================================
+
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"Could you help me make the search query DTO and helper
+functions with their tests?"
+How the output was used:
+Claude generated search-flights-query.dto.ts, search.constants.ts,
+search.utils.ts and search.utils.spec.ts (local date to UTC range,
+passenger rules, price check, sorting). [I read through each function and
+can explain it.] [I ran tsc/lint/jest on my machine.]
+================================================
+
+================================================
+Date: 2026-11-13
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"I want to create placeholders while member 2 and member 4's work haven't
+been done yet"
+How the output was used:
+Claude generated search.placeholders.ts: a SearchableFlight interface that
+stands in for member 2's Flight schema, and a getHeldSeats() stub that
+returns 0 until member 4's holds exist. Both are temporary and will be
+replaced when their work is merged into develop. [I reviewed the file and
+the type-check passes on my machine: yes]
+================================================
