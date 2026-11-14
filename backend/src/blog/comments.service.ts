@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { PostStatus } from './post-status.enum';
@@ -14,33 +14,43 @@ import { Post } from './schemas/post.schema';
 @Injectable()
 export class CommentsService {
   constructor(
+    @InjectConnection() private readonly connection: Connection,
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
   ) {}
 
   /** BLG-05: comment on a published post. */
   async create(authorId: string, postId: string, dto: CreateCommentDto) {
-    // Missing posts and drafts both give 404, so nobody can tell that
-    // someone else's draft exists.
-    const post = await this.postModel
-      .exists({ _id: postId, status: PostStatus.Published })
-      .exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
+    // One transaction: the comment and the post's commentCount are saved
+    // together or not at all.
+    return this.connection.transaction(async (session) => {
+      // Counting first doubles as the check that the post is published, and
+      // it conflicts with a post being deleted at the same time. Missing
+      // posts and drafts both give 404, so nobody can tell that someone
+      // else's draft exists.
+      const counted = await this.postModel
+        .updateOne(
+          { _id: postId, status: PostStatus.Published },
+          { $inc: { commentCount: 1 } },
+          { session },
+        )
+        .exec();
+      if (counted.matchedCount === 0) {
+        throw new NotFoundException('Post not found');
+      }
 
-    const comment = await this.commentModel.create({
-      postId: new Types.ObjectId(postId),
-      authorId: new Types.ObjectId(authorId),
-      text: dto.text,
+      const [comment] = await this.commentModel.create(
+        [
+          {
+            postId: new Types.ObjectId(postId),
+            authorId: new Types.ObjectId(authorId),
+            text: dto.text,
+          },
+        ],
+        { session },
+      );
+      return comment;
     });
-
-    // The counter on the post is changed atomically (shown in BLG-03)
-    await this.postModel
-      .updateOne({ _id: postId }, { $inc: { commentCount: 1 } })
-      .exec();
-
-    return comment;
   }
 
   /** BLG-07: the author edits their own comment. */
@@ -53,15 +63,26 @@ export class CommentsService {
   /** BLG-07: the author deletes their own comment. */
   async remove(authorId: string, commentId: string) {
     const comment = await this.findOwnComment(authorId, commentId);
-    await comment.deleteOne();
 
-    // Never below 0, even if the counter was already wrong
-    await this.postModel
-      .updateOne(
-        { _id: comment.postId, commentCount: { $gt: 0 } },
-        { $inc: { commentCount: -1 } },
-      )
-      .exec();
+    await this.connection.transaction(async (session) => {
+      // Two requests at the same time: only the one that really deleted the
+      // comment may lower the counter.
+      const removed = await this.commentModel
+        .deleteOne({ _id: comment._id, authorId: comment.authorId }, { session })
+        .exec();
+      if (removed.deletedCount === 0) {
+        throw new NotFoundException('Comment not found');
+      }
+
+      // Never below 0, even if the counter was already wrong
+      await this.postModel
+        .updateOne(
+          { _id: comment.postId, commentCount: { $gt: 0 } },
+          { $inc: { commentCount: -1 } },
+          { session },
+        )
+        .exec();
+    });
 
     return { deleted: true, id: commentId };
   }
