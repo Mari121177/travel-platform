@@ -7,6 +7,8 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BLOG_PAGE_SIZE } from './blog.constants';
+import { Comment } from './schemas/comment.schema';
+import { Like } from './schemas/like.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ListMyPostsQueryDto } from './dto/list-my-posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -16,6 +18,8 @@ import { Post, PostDocument } from './schemas/post.schema';
 @Injectable()
 export class BlogService {
   constructor(
+    @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
+    @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
   ) {}
 
@@ -105,9 +109,10 @@ export class BlogService {
   /** BLG-04: the author deletes their own post. */
   async remove(authorId: string, postId: string) {
     const post = await this.findOwnPost(authorId, postId);
-    // TODO BLG-05 / BLG-06: also delete this post's comments and likes
     // TODO GEN-08: UploadsService.deleteByUrl() for each image, once #16 is merged
     await post.deleteOne();
+    await this.commentModel.deleteMany({ postId: post._id }).exec();
+    await this.likeModel.deleteMany({ postId: post._id }).exec();
     return { deleted: true, id: postId };
   }
 
