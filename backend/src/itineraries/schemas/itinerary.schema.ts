@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
+import { ItineraryDay, ItineraryDaySchema } from './itinerary-day.schema';
 
 export type ItineraryDocument = HydratedDocument<Itinerary>;
 
@@ -12,12 +13,18 @@ export type ItineraryVisibility =
 
 /**
  * ITN-01: an itinerary owned by one registered user.
- * Days, activities and budget entries are added in later tasks (ITN-05, ITN-10, ITN-14).
+ * Days are stored inside it (ITN-05). Activities and budget entries are added in
+ * later tasks (ITN-10, ITN-14).
  */
 @Schema({ timestamps: true, collection: 'itineraries' })
 export class Itinerary {
   // Owner. Only the owner may edit or delete (GEN-13).
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   ownerId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true, maxlength: 100 })
@@ -38,10 +45,11 @@ export class Itinerary {
     default: ItineraryVisibility.Private,
   })
   visibility!: ItineraryVisibility;
-  // Placeholder until ITN-05 defines the day structure
-  @Prop({ type: [SchemaTypes.Mixed], default: [] })
-  days!: unknown[];
-  
+
+  // Ordered days, at most 60 (ITN-05). The array order is the day order.
+  @Prop({ type: [ItineraryDaySchema], default: [] })
+  days!: ItineraryDay[];
+
   createdAt?: Date;
   updatedAt?: Date;
 }
