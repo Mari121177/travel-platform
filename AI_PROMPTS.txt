@@ -348,3 +348,39 @@ Add budget entries per day with a category, amount and currency, a budget summar
 How the output was used:
 Different currencies are not added together until ITN-18 converts them, so the summary totals and the city group subtotals are maps per currency. Negative amounts and unknown categories are rejected (400). The summary gives totals by category and per day. I reviewed the code and tested create, edit, delete, the itinerary view with subtotals, the summary, deleting a day (its items go with it), and the 404/403 rules for a second user in Swagger.
 ================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-18
+Category: Code generation
+Prompt:
+Convert all itinerary budget amounts to the user's preferred currency using exchange rates from FXRatesAPI, fetched once per day and cached in the database, with the rate date shown and the last cached rates used if the API is unavailable.
+How the output was used:
+Rates are fetched by the NestJS backend and stored as one document per day in an exchange_rates collection. The API key is read from the backend .env only (the empty name FXRATES_API_KEY= was added to .env.example). The budget summary and the city group subtotals are converted to the user's preferredCurrency and return the rate date, a ratesStale flag and the original amounts per currency. If the API fails the last cached rates are used, and with no cache the endpoint returns 503. I reviewed the code and tested in Swagger: the converted summary in EGP with the rate date, a second call that used the cached rates with an empty API key (no API call needed), the itinerary view with convertedSubtotal and the rate date, and the summary in USD (no conversion). The fallback to old cached rates and the 503 case are not tested yet, because they need database access.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-20
+Category: Code generation
+Prompt:
+Let the owner set an itinerary to Public or Private, so that public itineraries are read-only to other users and setting Private removes them immediately.
+How the output was used:
+Visibility is changed through PATCH /api/itineraries/:id. Non-owners get 404 on a private itinerary and 403 when editing a public one. I reviewed the code and tested in Swagger: setting the itinerary to public (200), an invalid visibility value (400) and a null visibility (400). The second-user checks are not tested yet.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-10
+Category: Code generation
+Prompt:
+Add an isHidden flag to itineraries so that hidden content is visible only to its author and admins.
+How the output was used:
+Added an isHidden field (default false) to the itinerary schema. In the code, other users get 404 on a hidden itinerary and its budget summary, while the owner and admins can still read it. The field name is to be agreed with Mariam. I reviewed the code and checked in Swagger that a new itinerary is created with isHidden set to false. Reading a hidden itinerary as another user is not tested yet, because setting the flag needs database access.
+================================================

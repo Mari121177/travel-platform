@@ -14,6 +14,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -27,8 +28,8 @@ import { ItineraryIdParamDto } from './dto/itinerary-id-param.dto';
 import { ObjectIdParamDto } from './dto/object-id-param.dto';
 import { UpdateBudgetEntryDto } from './dto/update-budget-entry.dto';
 
-// ITN-14. Adding, editing and deleting is owner only. Someone else's private
-// itinerary gives 404, their public one gives 403 (same as ITN-01).
+// ITN-14, ITN-18. Adding, editing and deleting is owner only. Someone else's
+// private itinerary gives 404, their public one gives 403 (same as ITN-01).
 @ApiTags('Budgets')
 @ApiCookieAuth('access_token')
 @Controller()
@@ -81,10 +82,16 @@ export class BudgetsController {
   @Roles(Role.User)
   @ApiOperation({
     summary:
-      'ITN-14: total budget by category and by day (one total per currency until ITN-18 converts them)',
+      "ITN-14, ITN-18: total budget by category and by day, converted to the user's preferred currency, with the rate date",
   })
-  @ApiOkResponse({ description: 'Totals per currency, in total and per day' })
+  @ApiOkResponse({
+    description:
+      'total, byCategory and byDay in the preferred currency, plus rateDate, ratesStale and the original amounts per currency',
+  })
   @ApiNotFoundResponse({ description: 'Itinerary not found' })
+  @ApiServiceUnavailableResponse({
+    description: 'No exchange rates available (API down and nothing cached)',
+  })
   summary(@Param() params: ItineraryIdParamDto, @CurrentUser() user: AuthUser) {
     return this.budgetsService.getSummary(params.id, user);
   }

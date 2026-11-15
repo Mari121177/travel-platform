@@ -33,8 +33,10 @@ export interface CityGroupView {
   endDate: string;
   dayCount: number;
   // The group's planned amounts, one total per currency, for example
-  // { "USD": 120, "EUR": 40 }. A single converted total comes with ITN-18.
+  // { "USD": 120, "EUR": 40 }.
   budgetSubtotals: Record<string, number>;
+  // ITN-18: the group's subtotal in the viewer's preferred currency
+  convertedSubtotal?: number;
 }
 
 /** The date of day number (index + 1): the start date plus index days (UTC). */

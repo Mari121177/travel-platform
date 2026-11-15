@@ -110,3 +110,17 @@ export function totalsPerCurrency(items: CostItem[]): Record<string, number> {
     ]),
   );
 }
+
+function emptyTotals(): CurrencyTotals {
+  return {
+    total: 0,
+    byCategory: Object.fromEntries(
+      COST_CATEGORIES.map((category) => [category, 0]),
+    ) as CategoryTotals,
+  };
+}
+
+/** ITN-18: the total and per-category totals of items already in one currency. */
+export function totalsFor(items: CostItem[], currency: string): CurrencyTotals {
+  return sumByCurrency(items)[currency] ?? emptyTotals();
+}
