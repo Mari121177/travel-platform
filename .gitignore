@@ -4,3 +4,5 @@ dist/
 .next/
 .DS_Store
 *.tsbuildinfo
+# Uploaded images (GEN-08) are stored on the server and never committed
+/backend/uploads/
