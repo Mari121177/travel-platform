@@ -477,3 +477,20 @@ How the output was used:
 Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
 webhook [200], booking Confirmed, then cancel and full refund.
 ================================================
+Date: 2026-11-13
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-13, ACC-07a, GEN-07, GEN-13
+Category: Code generation
+Prompt:
+How should I implement the admin endpoint that creates a hotel moderator with
+a temporary password, links the moderator to one hotel, and writes an audit log
+entry, while the airline side is still blocked on FLT-01?
+
+How the output was used:
+Added POST /api/admin/moderators with a validated DTO, a bcrypt-hashed
+temporary password, mustChangePassword = true, assignedProviderId set to the
+hotel id, a duplicate-email check, an audit log entry, and Swagger
+documentation. The airline branch is deliberately rejected until the Airline
+schema is merged. Reviewed the diff and tested the endpoint in Swagger.
+================================================
