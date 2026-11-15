@@ -272,3 +272,14 @@ Asked Claude for assistance NestJS airline schema.
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-08, FLT-09
+Prompt:
+Asked Claude for the baggage-policy and cancellation-tier endpoints and the refund helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
