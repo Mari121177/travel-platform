@@ -249,6 +249,7 @@ How the output was used:
 Reviewed the updated controller, merged develop into my branch, and tested in
 Swagger: 401 when logged out, 200 after login. Coordinated the payments
 contract with member 6.
+================================================
 
 ================================================
 Date: 2026-11-13
@@ -262,6 +263,7 @@ How the output was used:
 Used as the base for the uploads module. I reviewed it and tested it in Swagger with a valid PNG (201), a PDF, a text file and a fake PNG (all 400), a logged-out request (401), and opened a saved image by its URL.
 After Copilot's review I added a fields limit, a stricter image structure check, and error handling in the delete helper, and re-tested.
 ================================================
+
 Date: 2026-11-13
 Student: Mariam
 Tool: OpenCode
@@ -278,7 +280,8 @@ temporary password, mustChangePassword = true, assignedProviderId set to the
 hotel id, a duplicate-email check, an audit log entry, and Swagger
 documentation. The airline branch is deliberately rejected until the Airline
 schema is merged. Reviewed the diff and tested the endpoint in Swagger.
-====================================
+================================================
+
 Date: 2026-11-14
 Student: Habiba Khaled
 Tool: Claude
@@ -288,7 +291,8 @@ Prompt:
 How to ignore the uploaded images folder in the root .gitignore without also ignoring the backend/src/uploads source folder.
 How the output was used:
 Added /backend/uploads/ to .gitignore and checked with git check-ignore and git ls-files that the images folder is ignored and the source folder is still tracked.
-====================================
+================================================
+
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
@@ -311,5 +315,4 @@ Wrote the comments and likes parts of the blog module: Comment and Like schemas,
 How the output was used:
 Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
 After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
->>>>>>> origin/develop
 ================================================
