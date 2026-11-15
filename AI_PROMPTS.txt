@@ -283,3 +283,14 @@ Asked Claude for the baggage-policy and cancellation-tier endpoints and the refu
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-03 to FLT-06, FLT-30
+Prompt:
+Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
