@@ -466,3 +466,14 @@ Add an isHidden flag to itineraries so that hidden content is visible only to it
 How the output was used:
 Added an isHidden field (default false) to the itinerary schema, to be agreed with Mariam as the field name. I reviewed the code and checked in Swagger that a new itinerary is created with isHidden set to false.
 ================================================
+Date: 2026-11-15
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: PAY-01 to PAY-04
+Category: Code generation, Testing
+Prompt:
+Help me write the payments module.
+How the output was used:
+Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
+webhook [200], booking Confirmed, then cancel and full refund.
+================================================
