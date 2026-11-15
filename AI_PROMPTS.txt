@@ -264,7 +264,15 @@ Used as the base for the uploads module. I reviewed it and tested it in Swagger 
 After Copilot's review I added a fields limit, a stricter image structure check, and error handling in the delete helper, and re-tested.
 ================================================
 
-================================================
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-08
+Category: Code generation
+Prompt:
+How to ignore the uploaded images folder in the root .gitignore without also ignoring the backend/src/uploads source folder.
+How the output was used:
+Added /backend/uploads/ to .gitignore and checked with git check-ignore and git ls-files that the images folder is ignored and the source folder is still tracked.
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
