@@ -11,6 +11,7 @@ import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { Airline, AirlineDocument } from './airline.schema';
 import { CreateAirlineDto, UpdateAirlineDto } from './dto/airline.dto';
+import { BaggagePolicyDto, CancellationPolicyDto } from './dto/airline-policy.dto';
 
 @Injectable()
 export class AirlinesService {
@@ -50,6 +51,31 @@ export class AirlinesService {
       if (e.code === 11000) throw new ConflictException('Airline name or code already exists');
       throw e;
     }
+  }
+
+  // FLT-08: price per extra bag and max extra bags per passenger
+  async setBaggagePolicy(id: string, dto: BaggagePolicyDto, user: AuthUser) {
+    this.assertManages(await this.findOne(id), user);
+    return this.model.findByIdAndUpdate(
+      id,
+      { $set: { extraBagPrice: dto.extraBagPrice, maxExtraBags: dto.maxExtraBags } },
+      { new: true, runValidators: true },
+    );
+  }
+
+  // FLT-09: cancellation tiers (replaces the whole list)
+  async setCancellationPolicy(id: string, dto: CancellationPolicyDto, user: AuthUser) {
+    this.assertManages(await this.findOne(id), user);
+    const days = dto.tiers.map((t) => t.daysBeforeDeparture);
+    if (new Set(days).size !== days.length) {
+      throw new BadRequestException('Each daysBeforeDeparture threshold must be unique');
+    }
+    const tiers = [...dto.tiers].sort((a, b) => b.daysBeforeDeparture - a.daysBeforeDeparture);
+    return this.model.findByIdAndUpdate(
+      id,
+      { $set: { cancellationTiers: tiers } },
+      { new: true, runValidators: true },
+    );
   }
 
   /** For Mariam's admin deactivate/reactivate endpoints (ACC-15) */
