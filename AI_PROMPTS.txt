@@ -320,3 +320,35 @@ How the output was used:
 Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
 After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
 ================================================
+Date: 2026-11-11
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Code generation
+Prompt:
+Wrote the itinerary schema, DTOs, service and controller for ITN-01 in NestJS, following the existing auth and reference-data code style.
+How the output was used:
+Used as the base for the itineraries module. I reviewed it and tested all endpoints in Swagger.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Debugging
+Prompt:
+How to address the PR review: fixed page size of 10, days placeholder in the list, 404 for other users' private itineraries, resolving the AI_PROMPTS.txt merge conflict, and a seeded country code in the Swagger example.
+How the output was used:
+Applied the changes in the itineraries module, kept all existing entries in AI_PROMPTS.txt, and re-tested in Swagger.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-03
+Category: Debugging
+Prompt:
+How to fix the review point that the page parameter is unbounded, and how to merge develop and resolve the AI_PROMPTS.txt conflict.
+How the output was used:
+Added a maximum to the page parameter in the list query DTO and merged develop, keeping every existing entry.
+================================================
