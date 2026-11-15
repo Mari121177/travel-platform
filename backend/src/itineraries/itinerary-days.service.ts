@@ -126,8 +126,8 @@ export class ItineraryDaysService {
     if (!updated) {
       throw new NotFoundException('Day not found');
     }
-    // TODO ITN-10, ITN-14, ITN-16: also delete this day's activities, budget
-    // entries and transport costs once those exist
+    // ITN-07: what was planned on the deleted day goes with it
+    await this.itinerariesService.deleteDayPlanItems(id, dayId);
     return this.itinerariesService.buildView(updated);
   }
 

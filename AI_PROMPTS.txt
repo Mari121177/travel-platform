@@ -363,3 +363,35 @@ How the output was used:
 Days are embedded in the itinerary document. Each change is a single atomic update ($push with a size guard, positional $set, $pull, and an aggregation-pipeline update for reorder), so concurrent requests cannot break the 60-day limit or lose a day. Day numbers, dates and city groups are computed when reading, so nothing needs renumbering. I reviewed the code and tested every route in Swagger.
 Reorder first failed with a 500 because Mongoose needs the updatePipeline option for pipeline-style updates; fixed by setting updatePipeline: true.
 ================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-10
+Category: Code generation
+Prompt:
+Add activities to an itinerary day: name and description required, optional time (HH:mm) and cost with currency, sorted by time with the no-time ones last.
+How the output was used:
+Activities are stored in their own collection and shown under each day when the itinerary is read. Add, edit and delete are owner-only; other users get 404 on a private itinerary and 403 on a public one. I reviewed the code and tested in Swagger: create with and without time and cost (201), cost without currency (400), currency without cost (400), unknown currency (400), bad time (400), PATCH with cost null (clears cost and currency), and PATCH with name null (400).
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-16
+Category: Code generation
+Prompt:
+Add intercity transport costs to a day: mode, from city, to city, amount and currency.
+How the output was used:
+Transport costs are stored in their own collection and shown under their day, and counted as intercity_transport in the budget summary. The requirements sheet does not define transport modes, so I used flight, train, bus, car, ferry and other. I reviewed the code and tested create, edit and delete in Swagger.
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-14, ITN-09
+Category: Code generation
+Prompt:
+Add budget entries per day with a category, amount and currency, a budget summary, and budget subtotals on the city groups.
+How the output was used:
+Different currencies are not added together until ITN-18 converts them, so the summary totals and the city group subtotals are maps per currency. Negative amounts and unknown categories are rejected (400). The summary gives totals by category and per day. I reviewed the code and tested create, edit, delete, the itinerary view with subtotals, the summary, deleting a day (its items go with it), and the 404/403 rules for a second user in Swagger.
+================================================
