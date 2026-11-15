@@ -277,3 +277,15 @@ Used as the base for the blog module. I reviewed it and tested it in Swagger: cr
 After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
 I also replaced the copied image URL pattern with the shared one from the uploads module.
 ================================================
+================================================
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-05, BLG-06, BLG-07
+Category: Code generation
+Prompt:
+Wrote the comments and likes parts of the blog module: Comment and Like schemas, DTOs, services and controllers for POST /api/posts/:id/comments, PATCH and DELETE /api/comments/:id, and POST and DELETE /api/posts/:id/like. Comments are allowed only on published posts, are 1 to 500 characters, and only the author can edit or delete them. A user can like a post once (enforced by a unique index), and can remove the like. The comment and like counts on the post are kept in sync, and deleting a post deletes its comments and likes.
+How the output was used:
+Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
+After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
+================================================

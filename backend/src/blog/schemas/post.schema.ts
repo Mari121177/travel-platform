@@ -2,14 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { POST_BODY_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from '../blog.constants';
 import { PostStatus } from '../post-status.enum';
+import { maxCharacters } from '../validators/max-characters';
 
-// The DTO counts characters (code points). Mongoose's maxlength counts UTF-16
-// units, so an emoji title could pass the DTO and then fail on save (500).
-// This validator counts code points too, so both layers agree.
-const maxCharacters = (max: number) => ({
-  validator: (value: string) => Array.from(value).length <= max,
-  message: `must be at most ${max} characters`,
-});
 
 export type PostDocument = HydratedDocument<Post>;
 

@@ -4,9 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import { BLOG_PAGE_SIZE } from './blog.constants';
+import { Comment } from './schemas/comment.schema';
+import { Like } from './schemas/like.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ListMyPostsQueryDto } from './dto/list-my-posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -16,6 +18,9 @@ import { Post, PostDocument } from './schemas/post.schema';
 @Injectable()
 export class BlogService {
   constructor(
+    @InjectConnection() private readonly connection: Connection,    
+    @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
+    @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
   ) {}
 
@@ -102,14 +107,28 @@ export class BlogService {
     return post;
   }
 
-  /** BLG-04: the author deletes their own post. */
-  async remove(authorId: string, postId: string) {
-    const post = await this.findOwnPost(authorId, postId);
-    // TODO BLG-05 / BLG-06: also delete this post's comments and likes
-    // TODO GEN-08: UploadsService.deleteByUrl() for each image, once #16 is merged
-    await post.deleteOne();
-    return { deleted: true, id: postId };
-  }
+     /** BLG-04: the author deletes their own post. */
+     async remove(authorId: string, postId: string) {
+       const post = await this.findOwnPost(authorId, postId);
+       // TODO GEN-08: UploadsService.deleteByUrl() for each image, once #16 is merged
+
+       // One transaction: the post and its comments and likes are deleted
+       // together or not at all. A comment or like being added at the same
+       // time conflicts with this delete and is retried, so none is left behind.
+       await this.connection.transaction(async (session) => {
+         const deleted = await this.postModel
+           .deleteOne({ _id: post._id, authorId: post.authorId }, { session })
+           .exec();
+         if (deleted.deletedCount === 0) {
+           throw new NotFoundException('Post not found');
+         }
+         await this.commentModel
+           .deleteMany({ postId: post._id }, { session })
+           .exec();
+         await this.likeModel.deleteMany({ postId: post._id }, { session }).exec();
+       });
+       return { deleted: true, id: postId };
+     }
 
   /**
    * Finds a post that must belong to the logged-in user.
