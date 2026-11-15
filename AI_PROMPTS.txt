@@ -526,3 +526,13 @@ Asked Claude to check the flight and cabin schemas, DTOs, service, controller an
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+
+Date: 2026-11-16
+Student: Habiba
+Tool: Claude
+Related Requirement: GEN-10
+Prompt:
+Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
+How the output was used:
+Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+================================================
