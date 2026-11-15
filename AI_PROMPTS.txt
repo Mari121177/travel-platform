@@ -114,19 +114,42 @@ preload file outside the repo that sets Node's DNS servers. Added JWT_SECRET
 to my local .env. No project files changed.
 ================================================
 
-Date: 2026-11-10
+Date: 2026-11-12
 Student: Hana
 Tool: Claude
-Related Requirement: (Git workflow)
+Related Requirement: HTL-04, HTL-05, HTL-06, HTL-08
 
 Prompt:
-Explain how to update my branch from develop without losing uncommitted
-work, and what git stash, merge and restore do.
+Explain the overall concept of room edit/deactivate/delete and the room
+availability calendar (open and blocked date ranges, status view), then write
+the code using the hotel-bookings helpers we agreed on and explain what each
+line does. Also give me test data to use in Swagger.
 
 How the output was used:
-Backed up, stashed, pulled develop, merged it into my feature branch and
-restored my work. Reverted an accidental project-wide Prettier reformat so
-my commit only contains src/hotels.
+Added updateRoom/deleteRoom (with a check that the room belongs to the hotel),
+add/edit/remove for open and blocked ranges with no-overlap rules (atomic
+$elemMatch check), checks against Confirmed and on-hold reservations via
+hasOverlappingReservation / hasConfirmedReservations / wasEverReserved, and a
+per-night status view. Used the test data to test the endpoints and role checks
+in Swagger myself, and rewrote some error messages to be clearer for users.
+================================================
+
+Date: 2026-11-13
+Student: Hana
+Tool: Claude
+Related Requirement: GEN-08, HTL-02, HTL-11, HTL-12, HTL-15, GEN-05
+
+Prompt:
+Give me test steps for my endpoints now that member 6's booking code is
+merged. Then make hotel photos accept only URLs from the uploads module, and
+explain and write the hotel search (filters, sorting, page size 10), the free
+rooms list with total price, and hotel details with dates.
+
+How the output was used:
+Tested blocking, deactivating and deleting a booked room (409) with member 6's
+real bookings. Added the uploads URL check to hotel photos (GEN-08 PR). Added
+searchHotels, getAvailableRooms and getHotelDetails, and ran 17 Swagger tests
+(filters, sorting, blocked nights, all 400 cases) before opening the search PR.
 ================================================
 
 Date: 2026-11-01
@@ -252,30 +275,6 @@ contract with member 6.
 ================================================
 
 ================================================
-Date: 2026-11-11
-Student: Habiba Khaled
-Tool: Claude
-Related Requirement: ITN-01, ITN-03
-Category: Code generation
-Prompt:
-Wrote the itinerary schema, DTOs, service and controller for ITN-01 in NestJS, following the existing auth and reference-data code style.
-How the output was used:
-Used as the base for the itineraries module. I reviewed it and tested all endpoints in Swagger.
-================================================
-
-================================================
-Date: 2026-11-13
-Student: Habiba Khaled
-Tool: Claude
-Related Requirement: ITN-01, ITN-03
-Category: Debugging
-Prompt:
-How to address the PR review: fixed page size of 10, days placeholder in the list, 404 for other users' private itineraries, resolving the AI_PROMPTS.txt merge conflict, and a seeded country code in the Swagger example.
-How the output was used:
-Applied the changes in the itineraries module, kept all existing entries in AI_PROMPTS.txt, and re-tested in Swagger.
-================================================
-
-================================================
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
@@ -288,7 +287,61 @@ Used as the base for the uploads module. I reviewed it and tested it in Swagger 
 After Copilot's review I added a fields limit, a stricter image structure check, and error handling in the delete helper, and re-tested.
 ================================================
 
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-08
+Category: Code generation
+Prompt:
+How to ignore the uploaded images folder in the root .gitignore without also ignoring the backend/src/uploads source folder.
+How the output was used:
+Added /backend/uploads/ to .gitignore and checked with git check-ignore and git ls-files that the images folder is ignored and the source folder is still tracked.
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-01, BLG-03, BLG-04
+Category: Code generation
+Prompt:
+Wrote the blog posts module: Post schema, DTOs with validation, service and controller for POST /api/posts, GET /api/posts/mine and PATCH and DELETE /api/posts/:id. Only the author can edit or delete a post (another user's draft gives 404, a published post gives 403), and null values in PATCH are rejected.
+How the output was used:
+Used as the base for the blog module. I reviewed it and tested it in Swagger: creating a draft and a published post (201), listing my posts, editing and publishing a draft (200), a bad image URL and a missing title (400), and deleting a post.
+After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
+I also replaced the copied image URL pattern with the shared one from the uploads module.
 ================================================
+================================================
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-05, BLG-06, BLG-07
+Category: Code generation
+Prompt:
+Wrote the comments and likes parts of the blog module: Comment and Like schemas, DTOs, services and controllers for POST /api/posts/:id/comments, PATCH and DELETE /api/comments/:id, and POST and DELETE /api/posts/:id/like. Comments are allowed only on published posts, are 1 to 500 characters, and only the author can edit or delete them. A user can like a post once (enforced by a unique index), and can remove the like. The comment and like counts on the post are kept in sync, and deleting a post deletes its comments and likes.
+How the output was used:
+Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
+After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
+================================================
+Date: 2026-11-11
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Code generation
+Prompt:
+Wrote the itinerary schema, DTOs, service and controller for ITN-01 in NestJS, following the existing auth and reference-data code style.
+How the output was used:
+Used as the base for the itineraries module. I reviewed it and tested all endpoints in Swagger.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Debugging
+Prompt:
+How to address the PR review: fixed page size of 10, days placeholder in the list, 404 for other users' private itineraries, resolving the AI_PROMPTS.txt merge conflict, and a seeded country code in the Swagger example.
+How the output was used:
+Applied the changes in the itineraries module, kept all existing entries in AI_PROMPTS.txt, and re-tested in Swagger.
+================================================
+
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
@@ -298,8 +351,6 @@ Prompt:
 How to fix the review point that the page parameter is unbounded, and how to merge develop and resolve the AI_PROMPTS.txt conflict.
 How the output was used:
 Added a maximum to the page parameter in the list query DTO and merged develop, keeping every existing entry.
-================================================
-
 ================================================
 Date: 2026-11-14
 Student: Habiba Khaled
@@ -312,8 +363,6 @@ How the output was used:
 Days are embedded in the itinerary document. Each change is a single atomic update ($push with a size guard, positional $set, $pull, and an aggregation-pipeline update for reorder), so concurrent requests cannot break the 60-day limit or lose a day. Day numbers, dates and city groups are computed when reading, so nothing needs renumbering. I reviewed the code and tested every route in Swagger.
 Reorder first failed with a 500 because Mongoose needs the updatePipeline option for pipeline-style updates; fixed by setting updatePipeline: true.
 ================================================
-
-================================================
 Date: 2026-11-15
 Student: Habiba Khaled
 Tool: Claude
@@ -325,7 +374,6 @@ How the output was used:
 Activities are stored in their own collection and shown under each day when the itinerary is read. Add, edit and delete are owner-only; other users get 404 on a private itinerary and 403 on a public one. I reviewed the code and tested in Swagger: create with and without time and cost (201), cost without currency (400), currency without cost (400), unknown currency (400), bad time (400), PATCH with cost null (clears cost and currency), and PATCH with name null (400).
 ================================================
 
-================================================
 Date: 2026-11-15
 Student: Habiba Khaled
 Tool: Claude
@@ -337,7 +385,6 @@ How the output was used:
 Transport costs are stored in their own collection and shown under their day, and counted as intercity_transport in the budget summary. The requirements sheet does not define transport modes, so I used flight, train, bus, car, ferry and other. I reviewed the code and tested create, edit and delete in Swagger.
 ================================================
 
-================================================
 Date: 2026-11-15
 Student: Habiba Khaled
 Tool: Claude
@@ -347,8 +394,6 @@ Prompt:
 Add budget entries per day with a category, amount and currency, a budget summary, and budget subtotals on the city groups.
 How the output was used:
 Different currencies are not added together until ITN-18 converts them, so the summary totals and the city group subtotals are maps per currency. Negative amounts and unknown categories are rejected (400). The summary gives totals by category and per day. I reviewed the code and tested create, edit, delete, the itinerary view with subtotals, the summary, deleting a day (its items go with it), and the 404/403 rules for a second user in Swagger.
-================================================
-
 ================================================
 Date: 2026-11-15
 Student: Habiba Khaled
@@ -361,7 +406,6 @@ How the output was used:
 Rates are fetched by the NestJS backend and stored as one document per day in an exchange_rates collection. The API key is read from the backend .env only (the empty name FXRATES_API_KEY= was added to .env.example). The budget summary and the city group subtotals are converted to the user's preferredCurrency and return the rate date, a ratesStale flag and the original amounts per currency. I reviewed the code and tested in Swagger: the converted summary in EGP with the rate date, a second call that used the cached rates with an empty API key (no API call needed), the itinerary view with convertedSubtotal and the rate date, and the summary in USD (no conversion).
 ================================================
 
-================================================
 Date: 2026-11-15
 Student: Habiba Khaled
 Tool: Claude
@@ -373,7 +417,6 @@ How the output was used:
 Visibility is changed through PATCH /api/itineraries/:id. I reviewed the code and tested in Swagger: setting the itinerary to public (200), an invalid visibility value (400) and a null visibility (400).
 ================================================
 
-================================================
 Date: 2026-11-15
 Student: Habiba Khaled
 Tool: Claude
