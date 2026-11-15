@@ -1,22 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  IsIn,
-  IsInt,
-  IsISO8601,
-  IsNumber,
-  IsOptional,
-  Matches,
-  Max,
-  Min,
-} from 'class-validator';
-import {
-  CABIN_CLASSES,
-  DEFAULT_PAGE_SIZE,
-  MAX_PAGE_SIZE,
-  SORT_FIELDS,
-  SORT_ORDERS,
-} from '../search.constants';
+import { IsIn, IsInt, IsISO8601, IsNumber, IsOptional, Matches, Min} from 'class-validator';
+import { CABIN_CLASSES, SORT_FIELDS, SORT_ORDERS } from '../search.constants';
 import type { CabinClass, SortField, SortOrder } from '../search.constants';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,19 +107,11 @@ export class SearchFlightsQueryDto {
   @IsIn(SORT_ORDERS)
   order: SortOrder = 'asc';
 
-  // GEN-05: page size 10
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
-
-  @ApiPropertyOptional({ default: DEFAULT_PAGE_SIZE, maximum: MAX_PAGE_SIZE })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_PAGE_SIZE)
-  limit: number = DEFAULT_PAGE_SIZE;
-}
+  // GEN-05: the page size is fixed at 10 (PAGE_SIZE), so there is no limit param
+    @ApiPropertyOptional({ default: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    page: number = 1;
+  }

@@ -6,6 +6,8 @@ import {
   sortResults,
   totalFare,
   validateSearchCriteria,
+  isPastLocalDate,
+  todayInTimeZone,
 } from './search.utils';
 
 describe('localDateToUtcRange (FLT-11)', () => {
@@ -169,5 +171,25 @@ describe('duration and sorting (FLT-15)', () => {
     const copy = [...items];
     sortResults(items, 'price');
     expect(items).toEqual(copy);
+  });
+});
+
+describe('past dates (FLT-11)', () => {
+  // 22:30 UTC on 13 Nov is already 14 Nov in Cairo (UTC+2) but still 13 Nov in New York
+  const now = new Date('2026-11-13T22:30:00Z');
+
+  it('today differs between time zones', () => {
+    expect(todayInTimeZone('Africa/Cairo', now)).toBe('2026-11-14');
+    expect(todayInTimeZone('America/New_York', now)).toBe('2026-11-13');
+  });
+
+  it('rejects yesterday but accepts today and the future', () => {
+    expect(isPastLocalDate('2026-11-13', 'Africa/Cairo', now)).toBe(true);
+    expect(isPastLocalDate('2026-11-14', 'Africa/Cairo', now)).toBe(false);
+    expect(isPastLocalDate('2026-12-01', 'Africa/Cairo', now)).toBe(false);
+  });
+
+  it('uses the departure airport time zone', () => {
+    expect(isPastLocalDate('2026-11-13', 'America/New_York', now)).toBe(false);
   });
 });

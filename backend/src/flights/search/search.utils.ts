@@ -149,3 +149,28 @@ export function sortResults<
   const direction = order === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => (value(a) - value(b)) * direction);
 }
+
+// Today's date as YYYY-MM-DD in a time zone (the date differs between zones)
+export function todayInTimeZone(
+  timeZone: string,
+  now: Date = new Date(),
+): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+// FLT-11: a departure date earlier than today's date at the departure airport
+// is rejected. YYYY-MM-DD strings compare correctly as text.
+export function isPastLocalDate(
+  date: string,
+  timeZone: string,
+  now: Date = new Date(),
+): boolean {
+  return date < todayInTimeZone(timeZone, now);
+}

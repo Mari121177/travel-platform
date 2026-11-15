@@ -80,10 +80,10 @@ export class FlightSearchResultDto {
   @ApiProperty({ example: 210, description: 'Duration in minutes' })
   durationMinutes!: number;
 
-  @ApiProperty({
-    example: 575,
+    @ApiProperty({
+    example: 250,
     description:
-      'Party price used by the price filter and price sort (to be confirmed with the team)',
+      'Per-person fare used by the price filter and price sort: the chosen cabin, or the cheapest cabin with enough seats for the party',
   })
   price!: number;
 
@@ -102,8 +102,8 @@ export class FlightSearchPageDto {
   @ApiProperty({ example: 1 })
   page!: number;
 
-  @ApiProperty({ example: 10 })
-  limit!: number;
+  @ApiProperty({ example: 10, description: 'Fixed page size (GEN-05)' })
+  pageSize!: number;
 }
 
 // FLT-12: a one-way search fills only `outbound`; a round trip also fills `return`

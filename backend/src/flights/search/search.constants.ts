@@ -18,6 +18,5 @@ export type SortOrder = (typeof SORT_ORDERS)[number];
 // FLT-12: infants pay 10% of the cabin fare
 export const INFANT_FARE_RATE = 0.1;
 
-// GEN-05: page size 10
-export const DEFAULT_PAGE_SIZE = 10;
-export const MAX_PAGE_SIZE = 100;
+// GEN-05: fixed page size, clients cannot change it
+export const PAGE_SIZE = 10;
