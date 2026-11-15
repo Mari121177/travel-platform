@@ -535,4 +535,15 @@ Prompt:
 Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
 How the output was used:
 Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-12, ACC-12
+Category: Code generation
+Prompt:
+Add the public author page GET /api/authors/:id with the author's name, join date, published posts and public itineraries, and hide deactivated users.
+How the output was used:
+Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
 ================================================

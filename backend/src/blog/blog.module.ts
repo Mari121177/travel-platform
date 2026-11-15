@@ -1,6 +1,12 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import {
+  Itinerary,
+  ItinerarySchema,
+} from '../itineraries/schemas/itinerary.schema';
 import { UsersModule } from '../users/users.module';
+import { AuthorsController } from './authors.controller';
+import { AuthorsService } from './authors.service';
 import { BlogController } from './blog.controller';
 import { BlogService } from './blog.service';
 import { CommentsController } from './comments.controller';
@@ -21,6 +27,8 @@ import { Post, PostSchema } from './schemas/post.schema';
       { name: Post.name, schema: PostSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: Like.name, schema: LikeSchema },
+      // BLG-12: the author page lists the author's public itineraries
+      { name: Itinerary.name, schema: ItinerarySchema },
     ]),
   ],
   // BlogController must stay BEFORE PublicBlogController: it has
@@ -31,8 +39,15 @@ import { Post, PostSchema } from './schemas/post.schema';
     TagsController,
     CommentsController,
     LikesController,
+    AuthorsController,
   ],
-  providers: [BlogService, CommentsService, LikesService, PublicBlogService],
+  providers: [
+    BlogService,
+    CommentsService,
+    LikesService,
+    PublicBlogService,
+    AuthorsService,
+  ],
   exports: [
     BlogService,
     CommentsService,
