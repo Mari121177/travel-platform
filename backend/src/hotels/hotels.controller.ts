@@ -16,6 +16,8 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { DateRangeDto } from './dto/date-range.dto';
 import { UpdateDateRangeDto } from './dto/update-date-range.dto';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
+import { SearchHotelsDto } from './dto/search-hotels.dto';
+import { OptionalStayQueryDto, StayQueryDto } from './dto/stay-query.dto';
 
 @ApiTags('Hotels')
 @Controller('hotels')
@@ -29,13 +31,26 @@ export class HotelsController {
     return this.hotelsService.createHotel(dto);
   }
 
-  // GET /api/hotels/:id  (HTL-02) — anyone can view
-  // NOTE: when we add GET 'search', it must go ABOVE this route,
-  // otherwise "search" would be treated as an :id.
+  // GET /api/hotels/search  (HTL-11, HTL-12) — public.
+  // MUST stay ABOVE GET ':id', otherwise "search" would be read as an id.
+  @Public()
+  @Get('search')
+  search(@Query() query: SearchHotelsDto) {
+    return this.hotelsService.searchHotels(query);
+  }
+
+  // GET /api/hotels/:id?checkIn=&checkOut=  (HTL-02) — public; rooms listed when dates given
   @Public()
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.hotelsService.findHotelById(id);
+  findOne(@Param('id') id: string, @Query() query: OptionalStayQueryDto) {
+    return this.hotelsService.getHotelDetails(id, query.checkIn, query.checkOut);
+  }
+
+  // GET /api/hotels/:id/rooms/available?checkIn=&checkOut=  (HTL-15) — public
+  @Public()
+  @Get(':id/rooms/available')
+  availableRooms(@Param('id') id: string, @Query() query: StayQueryDto) {
+    return this.hotelsService.getAvailableRooms(id, query.checkIn, query.checkOut);
   }
 
   // PATCH /api/hotels/:id  (HTL-01) — moderator edits their hotel
@@ -60,7 +75,7 @@ export class HotelsController {
     return this.hotelsService.updatePolicies(id, dto, user);
   }
 
-  // NEW (calendars) — GET /api/hotels/:id/availability?from=&to=  (HTL-08)
+  // GET /api/hotels/:id/availability?from=&to=  (HTL-08)
   @Roles(Role.HotelModerator)
   @Get(':id/availability')
   availabilityView(
@@ -106,7 +121,7 @@ export class HotelsController {
     return this.hotelsService.deleteRoom(id, roomId, user);
   }
 
-  // NEW (calendars) — POST /api/hotels/:id/rooms/:roomId/availability  (HTL-04, HTL-06)
+  // POST /api/hotels/:id/rooms/:roomId/availability  (HTL-04, HTL-06)
   @Roles(Role.HotelModerator)
   @Post(':id/rooms/:roomId/availability')
   addRange(
@@ -118,7 +133,7 @@ export class HotelsController {
     return this.hotelsService.addRange(id, roomId, dto, user);
   }
 
-  // NEW (calendars) — PATCH /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
+  // PATCH /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
   @Roles(Role.HotelModerator)
   @Patch(':id/rooms/:roomId/availability/:rangeId')
   updateRange(
@@ -131,7 +146,7 @@ export class HotelsController {
     return this.hotelsService.updateRange(id, roomId, rangeId, dto, user);
   }
 
-  // NEW (calendars) — DELETE /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
+  // DELETE /api/hotels/:id/rooms/:roomId/availability/:rangeId  (HTL-05, HTL-06)
   @Roles(Role.HotelModerator)
   @Delete(':id/rooms/:roomId/availability/:rangeId')
   removeRange(
