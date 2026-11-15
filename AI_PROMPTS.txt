@@ -297,3 +297,39 @@ How the output was used:
 Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
 After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
 ================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-02
+Category: Code generation
+Prompt:
+Write the public blog reads: a paginated list of published posts (10 per page) and the post page with title, author, date, body, tags, images, like count and comments, readable by guests.
+How the output was used:
+Added PublicBlogService, PublicBlogController and the query DTOs. Drafts are only visible to their author (404 for everyone else), and posts of a deactivated user are hidden. Authors are shown by name only. I reviewed the code and tested in Swagger: the plain list (newest first, drafts left out), the post page with comments and likedByMe, a draft as another user (404), my own draft (200), and GET /posts/mine still working. A TS4053 build error (PostListItem not exported) was fixed by exporting the type.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-08
+Category: Code generation
+Prompt:
+Add tag pages: GET /api/tags/:tag/posts returns the published posts that carry a tag.
+How the output was used:
+The tag route reuses the same list query as BLG-02 and adds the tag to the response. I reviewed the code and tested the tag filter on the list and the tag route in Swagger (the draft with the same tag is correctly left out).
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-09
+Category: Code generation
+Prompt:
+Add keyword search over title, tags and author name, ordered by likes plus comments (highest first) and newest first on ties, with a "No results" response.
+How the output was used:
+The search words are matched literally (special characters are escaped) and the list is sorted by likes plus comments. I reviewed the code and tested in Swagger: a keyword match, the ordering with a liked and commented post, and a keyword with no match (empty items with message "No results").
+================================================

@@ -4,7 +4,6 @@ import { POST_BODY_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from '../blog.constants';
 import { PostStatus } from '../post-status.enum';
 import { maxCharacters } from '../validators/max-characters';
 
-
 export type PostDocument = HydratedDocument<Post>;
 
 @Schema({ timestamps: true, collection: 'posts' })
