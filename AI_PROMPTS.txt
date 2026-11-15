@@ -352,3 +352,14 @@ How to fix the review point that the page parameter is unbounded, and how to mer
 How the output was used:
 Added a maximum to the page parameter in the list query DTO and merged develop, keeping every existing entry.
 ================================================
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-05, ITN-07, ITN-08, ITN-09
+Category: Code generation, Debugging
+Prompt:
+Add days to the itinerary: add/edit/delete/reorder with a 60-day limit, every day needs a seeded city, day numbers and dates derived from the start date, and consecutive same-city days grouped.
+How the output was used:
+Days are embedded in the itinerary document. Each change is a single atomic update ($push with a size guard, positional $set, $pull, and an aggregation-pipeline update for reorder), so concurrent requests cannot break the 60-day limit or lose a day. Day numbers, dates and city groups are computed when reading, so nothing needs renumbering. I reviewed the code and tested every route in Swagger.
+Reorder first failed with a 500 because Mongoose needs the updatePipeline option for pipeline-style updates; fixed by setting updatePipeline: true.
+================================================

@@ -27,10 +27,7 @@ export class ItinerariesController {
   @Post()
   @Roles(Role.User)
   @ApiOperation({ summary: 'Create an itinerary (ITN-01)' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateItineraryDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateItineraryDto) {
     return this.itinerariesService.create(userId, dto);
   }
 
@@ -48,7 +45,9 @@ export class ItinerariesController {
   // ABOVE this route, otherwise ":id" will swallow "public".
   @Get(':id')
   @Roles(Role.User)
-  @ApiOperation({ summary: 'Get one itinerary; private ones are owner-only (ITN-03)' })
+  @ApiOperation({
+    summary: 'Get one itinerary; private ones are owner-only (ITN-03)',
+  })
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.itinerariesService.findOne(id, user);
   }
