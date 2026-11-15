@@ -13,8 +13,8 @@ export type ItineraryVisibility =
 
 /**
  * ITN-01: an itinerary owned by one registered user.
- * Days are stored inside it (ITN-05). Activities and budget entries are added in
- * later tasks (ITN-10, ITN-14).
+ * Days are stored inside it (ITN-05). Activities, budget entries and transport
+ * costs are stored in their own collections (ITN-10, ITN-14, ITN-16).
  */
 @Schema({ timestamps: true, collection: 'itineraries' })
 export class Itinerary {
@@ -49,6 +49,11 @@ export class Itinerary {
   // Ordered days, at most 60 (ITN-05). The array order is the day order.
   @Prop({ type: [ItineraryDaySchema], default: [] })
   days!: ItineraryDay[];
+
+  // GEN-10: hidden content is visible only to its author and admins.
+  // Name to confirm with Mariam, who owns the admin side.
+  @Prop({ type: Boolean, default: false, index: true })
+  isHidden!: boolean;
 
   createdAt?: Date;
   updatedAt?: Date;

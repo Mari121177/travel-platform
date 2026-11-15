@@ -11,11 +11,13 @@ import {
   Country,
   CountryDocument,
 } from '../reference-data/schemas/country.schema';
+import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { toCostItems } from './budget-summary';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
 import { ListItinerariesQueryDto } from './dto/list-itineraries-query.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
+import { ExchangeRatesService } from './exchange-rates.service';
 import { ITINERARIES_PAGE_SIZE } from './itinerary.constants';
 import { buildDayViews, groupDaysByCity } from './itinerary-view';
 import type {
@@ -54,6 +56,7 @@ export class ItinerariesService {
     private readonly budgetModel: Model<BudgetEntryDocument>,
     @InjectModel(TransportCost.name)
     private readonly transportModel: Model<TransportCostDocument>,
+    private readonly exchangeRates: ExchangeRatesService,
   ) {}
 
   // ITN-01
@@ -97,7 +100,7 @@ export class ItinerariesService {
   // ITN-03: one itinerary. Private ones are owner-only.
   async findOne(id: string, user: AuthUser) {
     const itinerary = await this.getReadableOrFail(id, user);
-    return this.buildView(itinerary);
+    return this.buildView(itinerary, user);
   }
 
   // ITN-01 edit, ITN-20 visibility
@@ -116,7 +119,7 @@ export class ItinerariesService {
       itinerary.startDate = new Date(dto.startDate);
     if (dto.visibility !== undefined) itinerary.visibility = dto.visibility;
 
-    return this.buildView(await itinerary.save());
+    return this.buildView(await itinerary.save(), user);
   }
 
   // ITN-01 delete
@@ -141,9 +144,11 @@ export class ItinerariesService {
   /**
    * The itinerary with its days numbered and dated, what is planned on each
    * day, and the days grouped by city (ITN-05, ITN-09, ITN-10, ITN-14, ITN-16).
-   * Use this whenever an itinerary is sent to the client.
+   * Use this whenever an itinerary is sent to the client. When a viewer is
+   * given, the group subtotals are also converted into their preferred
+   * currency (ITN-18).
    */
-  async buildView(itinerary: ItineraryDocument) {
+  async buildView(itinerary: ItineraryDocument, viewer?: AuthUser) {
     const plain = itinerary.toObject();
     const cityIds = [...new Set(plain.days.map((day) => day.cityId))];
     const cities = cityIds.length
@@ -156,18 +161,43 @@ export class ItinerariesService {
 
     const plan = await this.loadPlanItems(itinerary._id);
     const days = buildDayViews(plain.startDate, plain.days, cityNames, plan);
-    return {
-      ...plain,
-      days,
-      cityGroups: groupDaysByCity(days, toCostItems(plan)),
-    };
+    const costItems = toCostItems(plan);
+    const cityGroups = groupDaysByCity(days, costItems);
+    const view = { ...plain, days, cityGroups };
+    if (!viewer) return view;
+
+    // ITN-18: best effort. If rates are unavailable the itinerary still opens,
+    // and the budget summary endpoint reports the exact error.
+    try {
+      const display = await this.exchangeRates.convertItems(
+        costItems,
+        viewer.preferredCurrency,
+      );
+      const converted = groupDaysByCity(days, display.items);
+      cityGroups.forEach((group, index) => {
+        group.convertedSubtotal =
+          converted[index].budgetSubtotals[display.currency] ?? 0;
+      });
+      return {
+        ...view,
+        budgetCurrency: display.currency,
+        rateDate: display.rateDate,
+        ratesStale: display.stale,
+      };
+    } catch {
+      return view;
+    }
   }
 
-  // Only the owner may change or delete (GEN-13)
+  // Only the owner may change or delete (GEN-13). Someone else gets 404 for a
+  // private or hidden itinerary and 403 for a visible public one.
   async getOwnedOrFail(id: string, user: AuthUser): Promise<ItineraryDocument> {
     const itinerary = await this.getOrFail(id);
     if (itinerary.ownerId.toString() !== user.id) {
-      if (itinerary.visibility === ItineraryVisibility.Private) {
+      if (
+        itinerary.visibility === ItineraryVisibility.Private ||
+        itinerary.isHidden
+      ) {
         throw new NotFoundException('Itinerary not found');
       }
       throw new ForbiddenException('You do not own this itinerary');
@@ -175,17 +205,21 @@ export class ItinerariesService {
     return itinerary;
   }
 
-  // Reading: a private itinerary is owner-only (404 for everyone else)
+  // Reading: private itineraries are owner-only (ITN-20), hidden ones are
+  // visible only to their author and admins (GEN-10). 404 for everyone else.
   async getReadableOrFail(
     id: string,
     user: AuthUser,
   ): Promise<ItineraryDocument> {
     const itinerary = await this.getOrFail(id);
-    if (
-      itinerary.visibility === ItineraryVisibility.Private &&
-      itinerary.ownerId.toString() !== user.id
-    ) {
-      throw new NotFoundException('Itinerary not found');
+    if (itinerary.ownerId.toString() !== user.id) {
+      const hiddenFromViewer = itinerary.isHidden && user.role !== Role.Admin;
+      if (
+        itinerary.visibility === ItineraryVisibility.Private ||
+        hiddenFromViewer
+      ) {
+        throw new NotFoundException('Itinerary not found');
+      }
     }
     return itinerary;
   }

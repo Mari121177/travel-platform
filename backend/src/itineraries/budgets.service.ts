@@ -6,9 +6,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
-import { sumByCurrency, toCostItems } from './budget-summary';
+import { sumByCurrency, toCostItems, totalsFor } from './budget-summary';
 import { CreateBudgetEntryDto } from './dto/create-budget-entry.dto';
 import { UpdateBudgetEntryDto } from './dto/update-budget-entry.dto';
+import { ExchangeRatesService } from './exchange-rates.service';
 import { ItinerariesService } from './itineraries.service';
 import { buildDayViews } from './itinerary-view';
 import { budgetView } from './plan-items';
@@ -27,6 +28,7 @@ export class BudgetsService {
     @InjectModel(BudgetEntry.name)
     private readonly budgetModel: Model<BudgetEntryDocument>,
     private readonly itinerariesService: ItinerariesService,
+    private readonly exchangeRates: ExchangeRatesService,
   ) {}
 
   async create(
@@ -85,12 +87,12 @@ export class BudgetsService {
   }
 
   /**
-   * ITN-14: the total budget broken down by category and by day. Budget
-   * entries, activity costs (under "activities") and transport costs (under
-   * "intercity_transport") are all included. Amounts in different currencies
-   * are NOT added together yet: each currency has its own total. The
-   * conversion into the user's currency comes with ITN-18.
-   * A private itinerary is owner-only (404 for everyone else).
+   * ITN-14, ITN-18: the total budget by category and by day, converted into
+   * the user's preferred currency with the rate date. Budget entries, activity
+   * costs (under "activities") and transport costs (under
+   * "intercity_transport") are all included. "original" keeps the untouched
+   * amounts per currency. A private or hidden itinerary is not readable by
+   * others (404).
    */
   async getSummary(id: string, user: AuthUser) {
     const itinerary = await this.itinerariesService.getReadableOrFail(id, user);
@@ -98,19 +100,29 @@ export class BudgetsService {
     const plan = await this.itinerariesService.loadPlanItems(itinerary._id);
     const items = toCostItems(plan);
 
+    const display = await this.exchangeRates.convertItems(
+      items,
+      user.preferredCurrency,
+    );
     const days = buildDayViews(plain.startDate, plain.days, new Map());
+
     return {
       itineraryId: plain._id,
-      byCurrency: sumByCurrency(items),
+      currency: display.currency,
+      rateDate: display.rateDate,
+      ratesStale: display.stale,
+      ...totalsFor(display.items, display.currency),
       byDay: days.map((day) => ({
         dayId: day._id,
         dayNumber: day.dayNumber,
         date: day.date,
         cityId: day.cityId,
-        byCurrency: sumByCurrency(
-          items.filter((item) => item.dayId === String(day._id)),
+        ...totalsFor(
+          display.items.filter((item) => item.dayId === String(day._id)),
+          display.currency,
         ),
       })),
+      original: sumByCurrency(items),
     };
   }
 
