@@ -5,23 +5,39 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isValidObjectId, Model } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { City, CityDocument } from '../reference-data/schemas/city.schema';
 import {
   Country,
   CountryDocument,
 } from '../reference-data/schemas/country.schema';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { toCostItems } from './budget-summary';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
 import { ListItinerariesQueryDto } from './dto/list-itineraries-query.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
 import { ITINERARIES_PAGE_SIZE } from './itinerary.constants';
 import { buildDayViews, groupDaysByCity } from './itinerary-view';
+import type {
+  ActivityItem,
+  BudgetItem,
+  PlanItems,
+  TransportItem,
+} from './plan-items';
+import { Activity, ActivityDocument } from './schemas/activity.schema';
+import {
+  BudgetEntry,
+  BudgetEntryDocument,
+} from './schemas/budget-entry.schema';
 import {
   Itinerary,
   ItineraryDocument,
   ItineraryVisibility,
 } from './schemas/itinerary.schema';
+import {
+  TransportCost,
+  TransportCostDocument,
+} from './schemas/transport-cost.schema';
 
 @Injectable()
 export class ItinerariesService {
@@ -32,6 +48,12 @@ export class ItinerariesService {
     private readonly countryModel: Model<CountryDocument>,
     @InjectModel(City.name)
     private readonly cityModel: Model<CityDocument>,
+    @InjectModel(Activity.name)
+    private readonly activityModel: Model<ActivityDocument>,
+    @InjectModel(BudgetEntry.name)
+    private readonly budgetModel: Model<BudgetEntryDocument>,
+    @InjectModel(TransportCost.name)
+    private readonly transportModel: Model<TransportCostDocument>,
   ) {}
 
   // ITN-01
@@ -74,13 +96,7 @@ export class ItinerariesService {
 
   // ITN-03: one itinerary. Private ones are owner-only.
   async findOne(id: string, user: AuthUser) {
-    const itinerary = await this.getOrFail(id);
-    if (
-      itinerary.visibility === ItineraryVisibility.Private &&
-      itinerary.ownerId.toString() !== user.id
-    ) {
-      throw new NotFoundException('Itinerary not found');
-    }
+    const itinerary = await this.getReadableOrFail(id, user);
     return this.buildView(itinerary);
   }
 
@@ -107,6 +123,7 @@ export class ItinerariesService {
   async remove(id: string, user: AuthUser) {
     const itinerary = await this.getOwnedOrFail(id, user);
     await itinerary.deleteOne();
+    await this.deleteAllPlanItems(itinerary._id);
     return { message: 'Itinerary deleted' };
   }
 
@@ -122,8 +139,9 @@ export class ItinerariesService {
   }
 
   /**
-   * The itinerary with its days numbered and dated, and the days grouped by
-   * city (ITN-05, ITN-09). Use this whenever an itinerary is sent to the client.
+   * The itinerary with its days numbered and dated, what is planned on each
+   * day, and the days grouped by city (ITN-05, ITN-09, ITN-10, ITN-14, ITN-16).
+   * Use this whenever an itinerary is sent to the client.
    */
   async buildView(itinerary: ItineraryDocument) {
     const plain = itinerary.toObject();
@@ -136,8 +154,13 @@ export class ItinerariesService {
       : [];
     const cityNames = new Map(cities.map((city) => [city.cityId, city.name]));
 
-    const days = buildDayViews(plain.startDate, plain.days, cityNames);
-    return { ...plain, days, cityGroups: groupDaysByCity(days) };
+    const plan = await this.loadPlanItems(itinerary._id);
+    const days = buildDayViews(plain.startDate, plain.days, cityNames, plan);
+    return {
+      ...plain,
+      days,
+      cityGroups: groupDaysByCity(days, toCostItems(plan)),
+    };
   }
 
   // Only the owner may change or delete (GEN-13)
@@ -150,6 +173,77 @@ export class ItinerariesService {
       throw new ForbiddenException('You do not own this itinerary');
     }
     return itinerary;
+  }
+
+  // Reading: a private itinerary is owner-only (404 for everyone else)
+  async getReadableOrFail(
+    id: string,
+    user: AuthUser,
+  ): Promise<ItineraryDocument> {
+    const itinerary = await this.getOrFail(id);
+    if (
+      itinerary.visibility === ItineraryVisibility.Private &&
+      itinerary.ownerId.toString() !== user.id
+    ) {
+      throw new NotFoundException('Itinerary not found');
+    }
+    return itinerary;
+  }
+
+  /** ITN-10, ITN-14, ITN-16: the day must belong to the itinerary. */
+  assertDayExists(itinerary: ItineraryDocument, dayId: string) {
+    if (!itinerary.days.some((day) => day._id.toString() === dayId)) {
+      throw new NotFoundException('Day not found');
+    }
+  }
+
+  /** ITN-14, ITN-16: money must be in a currency from the seeded countries. */
+  async assertCurrencySupported(currency: string) {
+    const found = await this.countryModel.exists({ currency });
+    if (!found) {
+      throw new BadRequestException(`Currency "${currency}" is not supported`);
+    }
+  }
+
+  /** ITN-16: cities must come from the seeded city list. */
+  async assertCityExists(cityId: string) {
+    const found = await this.cityModel.exists({ cityId });
+    if (!found) {
+      throw new BadRequestException(`City "${cityId}" is not supported`);
+    }
+  }
+
+  /** Everything planned in one itinerary (activities, budget, transport). */
+  async loadPlanItems(
+    itineraryId: Types.ObjectId | string,
+  ): Promise<PlanItems> {
+    const filter = { itineraryId };
+    const [activities, budgetEntries, transportCosts] = await Promise.all([
+      this.activityModel.find(filter).lean<ActivityItem[]>().exec(),
+      this.budgetModel.find(filter).lean<BudgetItem[]>().exec(),
+      this.transportModel.find(filter).lean<TransportItem[]>().exec(),
+    ]);
+    return { activities, budgetEntries, transportCosts };
+  }
+
+  /** ITN-07: when a day is deleted, what was planned on it goes too. */
+  async deleteDayPlanItems(itineraryId: string, dayId: string) {
+    const filter = { itineraryId, dayId };
+    await Promise.all([
+      this.activityModel.deleteMany(filter),
+      this.budgetModel.deleteMany(filter),
+      this.transportModel.deleteMany(filter),
+    ]);
+  }
+
+  /** ITN-01: when an itinerary is deleted, everything planned in it goes too. */
+  private async deleteAllPlanItems(itineraryId: Types.ObjectId) {
+    const filter = { itineraryId };
+    await Promise.all([
+      this.activityModel.deleteMany(filter),
+      this.budgetModel.deleteMany(filter),
+      this.transportModel.deleteMany(filter),
+    ]);
   }
 
   private async assertCountriesExist(codes: string[]) {

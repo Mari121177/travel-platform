@@ -1,3 +1,11 @@
+import { totalsPerCurrency, type CostItem } from './budget-summary';
+import {
+  activityView,
+  budgetView,
+  EMPTY_PLAN,
+  transportView,
+  type PlanItems,
+} from './plan-items';
 import type { ItineraryDay } from './schemas/itinerary-day.schema';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -9,6 +17,10 @@ export interface DayView {
   cityId: string;
   cityName: string | null;
   notes: string;
+  // ITN-10, ITN-14, ITN-16: what is planned on this day
+  activities: ReturnType<typeof activityView>[];
+  budgetEntries: ReturnType<typeof budgetView>[];
+  transportCosts: ReturnType<typeof transportView>[];
 }
 
 /** ITN-09: consecutive days in the same city, shown as one group. */
@@ -20,9 +32,9 @@ export interface CityGroupView {
   startDate: string;
   endDate: string;
   dayCount: number;
-  // The sum of the group's budget entries. Budget entries arrive with ITN-14,
-  // until then every group is 0.
-  budgetSubtotal: number;
+  // The group's planned amounts, one total per currency, for example
+  // { "USD": 120, "EUR": 40 }. A single converted total comes with ITN-18.
+  budgetSubtotals: Record<string, number>;
 }
 
 /** The date of day number (index + 1): the start date plus index days (UTC). */
@@ -32,28 +44,65 @@ export function dayDate(startDate: Date, index: number): string {
     .slice(0, 10);
 }
 
+// Activities in time order (no time last), then in the order they were added
+const byTimeThenId = (
+  a: { time?: string | null; _id: { toString(): string } },
+  b: { time?: string | null; _id: { toString(): string } },
+) =>
+  (a.time ?? '99:99').localeCompare(b.time ?? '99:99') ||
+  a._id.toString().localeCompare(b._id.toString());
+
+function groupByDay<T extends { dayId: { toString(): string } }>(items: T[]) {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const key = item.dayId.toString();
+    map.set(key, [...(map.get(key) ?? []), item]);
+  }
+  return map;
+}
+
 /**
  * ITN-05: day numbers and dates are derived from the array order and the start
  * date, so they are always right after an add, a delete, a reorder or a change
- * of the start date.
+ * of the start date. ITN-10, ITN-14, ITN-16: each day also carries what is
+ * planned on it.
  */
 export function buildDayViews(
   startDate: Date,
   days: ItineraryDay[],
   cityNames: Map<string, string>,
+  plan: PlanItems = EMPTY_PLAN,
 ): DayView[] {
-  return days.map((day, index) => ({
-    _id: day._id,
-    dayNumber: index + 1,
-    date: dayDate(startDate, index),
-    cityId: day.cityId,
-    cityName: cityNames.get(day.cityId) ?? null,
-    notes: day.notes,
-  }));
+  const activities = groupByDay(plan.activities);
+  const budgetEntries = groupByDay(plan.budgetEntries);
+  const transportCosts = groupByDay(plan.transportCosts);
+
+  return days.map((day, index) => {
+    const key = day._id.toString();
+    return {
+      _id: day._id,
+      dayNumber: index + 1,
+      date: dayDate(startDate, index),
+      cityId: day.cityId,
+      cityName: cityNames.get(day.cityId) ?? null,
+      notes: day.notes,
+      activities: (activities.get(key) ?? [])
+        .sort(byTimeThenId)
+        .map(activityView),
+      budgetEntries: (budgetEntries.get(key) ?? []).map(budgetView),
+      transportCosts: (transportCosts.get(key) ?? []).map(transportView),
+    };
+  });
 }
 
-/** ITN-09: group consecutive days that are in the same city. */
-export function groupDaysByCity(days: DayView[]): CityGroupView[] {
+/**
+ * ITN-09: group consecutive days that are in the same city, with the day count
+ * and the budget subtotal of each group.
+ */
+export function groupDaysByCity(
+  days: DayView[],
+  costItems: CostItem[] = [],
+): CityGroupView[] {
   const groups: CityGroupView[] = [];
   for (const day of days) {
     const last = groups[groups.length - 1];
@@ -70,9 +119,25 @@ export function groupDaysByCity(days: DayView[]): CityGroupView[] {
         startDate: day.date,
         endDate: day.date,
         dayCount: 1,
-        budgetSubtotal: 0,
+        budgetSubtotals: {},
       });
     }
+  }
+
+  const dayNumberById = new Map(
+    days.map((day) => [String(day._id), day.dayNumber]),
+  );
+  for (const group of groups) {
+    group.budgetSubtotals = totalsPerCurrency(
+      costItems.filter((item) => {
+        const dayNumber = dayNumberById.get(item.dayId);
+        return (
+          dayNumber !== undefined &&
+          dayNumber >= group.startDay &&
+          dayNumber <= group.endDay
+        );
+      }),
+    );
   }
   return groups;
 }
