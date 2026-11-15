@@ -454,7 +454,14 @@ export class HotelsService {
       throw new NotFoundException('Hotel not found');
     }
   }
-   // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // ACC-13: admin loads a hotel (active OR deactivated) to create a moderator.
+  // ---------------------------------------------------------------
+  findHotelForAdmin(hotelId: string): Promise<HotelDocument> {
+    return this.getHotelOrThrow(hotelId);
+  }
+
+  // ---------------------------------------------------------------
   // ACC-15: admin deactivates / reactivates a hotel (called by the admin module).
   // Existing Confirmed bookings stay valid; the hotel is just hidden and unbookable.
   // ---------------------------------------------------------------
