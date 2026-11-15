@@ -251,6 +251,7 @@ Swagger: 401 when logged out, 200 after login. Coordinated the payments
 contract with member 6.
 ================================================
 
+================================================
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
@@ -279,4 +280,15 @@ temporary password, mustChangePassword = true, assignedProviderId set to the
 hotel id, a duplicate-email check, an audit log entry, and Swagger
 documentation. The airline branch is deliberately rejected until the Airline
 schema is merged. Reviewed the diff and tested the endpoint in Swagger.
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-01, BLG-03, BLG-04
+Category: Code generation
+Prompt:
+Wrote the blog posts module: Post schema, DTOs with validation, service and controller for POST /api/posts, GET /api/posts/mine and PATCH and DELETE /api/posts/:id. Only the author can edit or delete a post (another user's draft gives 404, a published post gives 403), and null values in PATCH are rejected.
+How the output was used:
+Used as the base for the blog module. I reviewed it and tested it in Swagger: creating a draft and a published post (201), listing my posts, editing and publishing a draft (200), a bad image URL and a missing title (400), and deleting a post.
+After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
+I also replaced the copied image URL pattern with the shared one from the uploads module.
 ================================================
