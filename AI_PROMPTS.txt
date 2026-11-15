@@ -114,19 +114,42 @@ preload file outside the repo that sets Node's DNS servers. Added JWT_SECRET
 to my local .env. No project files changed.
 ================================================
 
-Date: 2026-11-10
+Date: 2026-11-12
 Student: Hana
 Tool: Claude
-Related Requirement: (Git workflow)
+Related Requirement: HTL-04, HTL-05, HTL-06, HTL-08
 
 Prompt:
-Explain how to update my branch from develop without losing uncommitted
-work, and what git stash, merge and restore do.
+Explain the overall concept of room edit/deactivate/delete and the room
+availability calendar (open and blocked date ranges, status view), then write
+the code using the hotel-bookings helpers we agreed on and explain what each
+line does. Also give me test data to use in Swagger.
 
 How the output was used:
-Backed up, stashed, pulled develop, merged it into my feature branch and
-restored my work. Reverted an accidental project-wide Prettier reformat so
-my commit only contains src/hotels.
+Added updateRoom/deleteRoom (with a check that the room belongs to the hotel),
+add/edit/remove for open and blocked ranges with no-overlap rules (atomic
+$elemMatch check), checks against Confirmed and on-hold reservations via
+hasOverlappingReservation / hasConfirmedReservations / wasEverReserved, and a
+per-night status view. Used the test data to test the endpoints and role checks
+in Swagger myself, and rewrote some error messages to be clearer for users.
+================================================
+
+Date: 2026-11-13
+Student: Hana
+Tool: Claude
+Related Requirement: GEN-08, HTL-02, HTL-11, HTL-12, HTL-15, GEN-05
+
+Prompt:
+Give me test steps for my endpoints now that member 6's booking code is
+merged. Then make hotel photos accept only URLs from the uploads module, and
+explain and write the hotel search (filters, sorting, page size 10), the free
+rooms list with total price, and hotel details with dates.
+
+How the output was used:
+Tested blocking, deactivating and deleting a booked room (409) with member 6's
+real bookings. Added the uploads URL check to hotel photos (GEN-08 PR). Added
+searchHotels, getAvailableRooms and getHotelDetails, and ran 17 Swagger tests
+(filters, sorting, blocked nights, all 400 cases) before opening the search PR.
 ================================================
 
 Date: 2026-11-01
