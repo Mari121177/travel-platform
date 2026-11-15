@@ -68,7 +68,10 @@ export class CommentsService {
       // Two requests at the same time: only the one that really deleted the
       // comment may lower the counter.
       const removed = await this.commentModel
-        .deleteOne({ _id: comment._id, authorId: comment.authorId }, { session })
+        .deleteOne(
+          { _id: comment._id, authorId: comment.authorId },
+          { session },
+        )
         .exec();
       if (removed.deletedCount === 0) {
         throw new NotFoundException('Comment not found');

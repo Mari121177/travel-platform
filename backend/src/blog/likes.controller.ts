@@ -20,7 +20,9 @@ import { LikesService } from './likes.service';
 // user: the id comes from the session, never from the request.
 @ApiTags('Blog')
 @ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+@ApiUnauthorizedResponse({
+  description: 'Not logged in, or the session expired',
+})
 @Roles(Role.User)
 @ApiForbiddenResponse({ description: 'Only registered users can like posts' })
 @Controller('posts')

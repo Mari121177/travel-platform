@@ -9,4 +9,3 @@ export const COMMENT_MAX_LENGTH = 500;
 
 /** GEN-05: every list is paginated with page size 10. */
 export const BLOG_PAGE_SIZE = 10;
-

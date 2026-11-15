@@ -1,17 +1,24 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { BookingPoliciesController } from './booking-policies.controller';
+import { PAYMENTS_PORT } from './interfaces/payable-booking.interface';
+import { PaymentsController } from './payments.controller';
+import { PaymentsService } from './payments.service';
+import { RefundsController } from './refunds.controller';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 import {
   PolicyAcceptance,
   PolicyAcceptanceSchema,
 } from './schemas/policy-acceptance.schema';
 import { Refund, RefundSchema } from './schemas/refund.schema';
+import { StripeService } from './stripe.service';
 
 /**
- * Step 1: schemas only.
- * Controllers and services (Stripe, webhook, policies, refunds) come in the next step,
- * after `stripe` is installed and booking states are agreed with Teammates 4 and 6.
+ * @Global() so the booking modules can inject PAYMENTS_PORT without importing
+ * this module (agreed contract with Members 4 and 6).
  */
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -19,9 +26,14 @@ import { Refund, RefundSchema } from './schemas/refund.schema';
       { name: Refund.name, schema: RefundSchema },
       { name: PolicyAcceptance.name, schema: PolicyAcceptanceSchema },
     ]),
+    NotificationsModule,
   ],
-  controllers: [],
-  providers: [],
-  exports: [MongooseModule],
+  controllers: [PaymentsController, BookingPoliciesController, RefundsController],
+  providers: [
+    StripeService,
+    PaymentsService,
+    { provide: PAYMENTS_PORT, useExisting: PaymentsService },
+  ],
+  exports: [PAYMENTS_PORT],
 })
 export class PaymentsModule {}
