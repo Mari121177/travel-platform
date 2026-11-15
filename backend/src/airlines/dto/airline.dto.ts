@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { UPLOAD_URL_REGEX } from '../../uploads/upload.constants';
 
 export class CreateAirlineDto {
   @ApiProperty({ example: 'EgyptAir' })
@@ -14,6 +15,9 @@ export class CreateAirlineDto {
   @ApiPropertyOptional({ description: 'Logo URL (set via the upload endpoint, GEN-08)' })
   @IsOptional()
   @IsString()
+  @Matches(UPLOAD_URL_REGEX, {
+    message: 'logoUrl must be a URL returned by the upload endpoint',
+  })
   logoUrl?: string;
 }
 
