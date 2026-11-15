@@ -619,9 +619,8 @@ export class HotelsService {
   // Helpers (private = only usable inside this class)
   // ===============================================================
 
-  // Key-card check: admin, or the moderator assigned to THIS hotel (GEN-13)
+  // GEN-13: only the moderator assigned to THIS hotel may manage it.
   private assertCanManageHotel(user: AuthUser, hotel: HotelDocument): void {
-    if (user.role === Role.Admin) return;
     if (
       user.role === Role.HotelModerator &&
       user.assignedProviderId === hotel._id.toString()
