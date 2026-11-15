@@ -4,6 +4,7 @@ export const AuditAction = {
   SuspendAccount: 'SUSPEND_ACCOUNT',
   ReactivateAccount: 'REACTIVATE_ACCOUNT',
   ResetPassword: 'RESET_PASSWORD',
+  CreateModerator: 'CREATE_MODERATOR',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
