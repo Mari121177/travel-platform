@@ -613,8 +613,7 @@ export class HotelsService {
   // ===============================================================
 
   // Key-card check: admin, or the moderator assigned to THIS hotel (GEN-13)
-  private assertCanManageHotel(user: AuthUser, hotel: HotelDocument): void {
-    if (user.role === Role.Admin) return;
+ private assertCanManageHotel(user: AuthUser, hotel: HotelDocument): void {
     if (
       user.role === Role.HotelModerator &&
       user.assignedProviderId === hotel._id.toString()
