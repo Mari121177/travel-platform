@@ -15,15 +15,18 @@ import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { UpdateHotelPoliciesDto } from './dto/update-hotel-policies.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-import { DateRangeDto } from './dto/date-range.dto'; // NEW (calendars)
-import { UpdateDateRangeDto } from './dto/update-date-range.dto'; // NEW (calendars)
+import { DateRangeDto } from './dto/date-range.dto';
+import { UpdateDateRangeDto } from './dto/update-date-range.dto';
+import { SearchHotelsDto } from './dto/search-hotels.dto';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_VIEW_NIGHTS = 31; // NEW (calendars): status view is limited to 31 nights
+const MAX_VIEW_NIGHTS = 31; // status view is limited to 31 nights
+const PAGE_SIZE = 10; // GEN-05
 
 type NightRange = { start: string; end: string }; // inclusive nights
-type StoredRange = NightRange & { _id: Types.ObjectId }; // NEW (calendars): a saved range has an _id
-type RangeKind = 'available' | 'blocked'; // NEW (calendars)
+type StoredRange = NightRange & { _id: Types.ObjectId }; // a saved range has an _id
+type RangeKind = 'available' | 'blocked';
+type LeanRoom = Room & { _id: Types.ObjectId }; // a room read with .lean()
 
 // "2026-11-10" + 1 -> "2026-11-11". UTC so time zones can't shift the date.
 function addDays(date: string, days: number): string {
@@ -176,7 +179,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (calendars) — HTL-04 + HTL-06: add an open or blocked range
+  // HTL-04 + HTL-06: add an open or blocked range
   // ===============================================================
   async addRange(
     hotelId: string,
@@ -223,7 +226,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (calendars) — HTL-05 + HTL-06: move or resize a range
+  // HTL-05 + HTL-06: move or resize a range
   // ===============================================================
   async updateRange(
     hotelId: string,
@@ -278,7 +281,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (calendars) — HTL-05 + HTL-06: remove a range
+  // HTL-05 + HTL-06: remove a range
   // ===============================================================
   async removeRange(
     hotelId: string,
@@ -310,7 +313,7 @@ export class HotelsService {
   }
 
   // ===============================================================
-  // NEW (calendars) — HTL-08: each room's status per night
+  // HTL-08: each room's status per night
   // ===============================================================
   async getAvailabilityView(hotelId: string, from: string, to: string, user: AuthUser) {
     const hotel = await this.getHotelOrThrow(hotelId);
@@ -363,6 +366,137 @@ export class HotelsService {
         }),
       })),
     };
+  }
+
+  // ===============================================================
+  // HTL-11 + HTL-12: search hotels (public)
+  // ===============================================================
+  async searchHotels(q: SearchHotelsDto) {
+    if (!q.cityId && !q.countryCode) {
+      throw new BadRequestException('Please choose a city or a country.');
+    }
+    this.assertStayDates(q.checkIn, q.checkOut);
+    if (q.minPrice !== undefined && q.maxPrice !== undefined && q.minPrice > q.maxPrice) {
+      throw new BadRequestException('The minimum price cannot be higher than the maximum price.');
+    }
+    if (q.rooms > q.guests) {
+      throw new BadRequestException('The number of rooms cannot be more than the number of guests.');
+    }
+
+    // 1. Active hotels in the city / country (+ rating filter: unrated hotels excluded)
+    const filter: Record<string, unknown> = { isActive: true };
+    if (q.cityId) filter.cityId = q.cityId;
+    if (q.countryCode) filter.countryCode = q.countryCode;
+    if (q.minRating !== undefined) {
+      filter.ratingCount = { $gt: 0 };
+      filter.ratingAvg = { $gte: q.minRating };
+    }
+    const hotels = await this.hotelModel.find(filter).lean();
+    const page = q.page ?? 1;
+    if (hotels.length === 0) {
+      return { data: [], total: 0, page, limit: PAGE_SIZE };
+    }
+
+    // 2. Every free room of those hotels for the whole stay, grouped by hotel
+    const free = await this.findFreeRooms(hotels.map((h) => h._id), q.checkIn, q.checkOut);
+    const byHotel = new Map<string, LeanRoom[]>();
+    for (const room of free) {
+      const key = String(room.hotelId);
+      byHotel.set(key, [...(byHotel.get(key) ?? []), room]);
+    }
+
+    // 3. Keep hotels with enough free rooms whose biggest rooms fit all guests
+    const nights = this.nightCount(q.checkIn, q.checkOut);
+    const results = hotels.flatMap((h) => {
+      const rooms = byHotel.get(String(h._id)) ?? [];
+      if (rooms.length < q.rooms) return [];
+
+      const capacity = [...rooms]
+        .sort((a, b) => b.maxOccupancy - a.maxOccupancy)
+        .slice(0, q.rooms)
+        .reduce((sum, r) => sum + r.maxOccupancy, 0);
+      if (capacity < q.guests) return [];
+
+      // HTL-12: price = the hotel's cheapest free room
+      const cheapest = Math.min(...rooms.map((r) => r.pricePerNight));
+      if (q.minPrice !== undefined && cheapest < q.minPrice) return [];
+      if (q.maxPrice !== undefined && cheapest > q.maxPrice) return [];
+
+      return [{
+        hotelId: String(h._id),
+        name: h.name,
+        address: h.address,
+        cityId: h.cityId,
+        countryCode: h.countryCode,
+        starClass: h.starClass,
+        photos: h.photos,
+        amenities: h.amenities,
+        ratingAvg: h.ratingAvg,
+        ratingCount: h.ratingCount,
+        cheapestPricePerNight: cheapest,
+        freeRooms: rooms.length,
+        nights,
+      }];
+    });
+
+    // 4. Sort (price: cheapest first by default; rating: best first by default)
+    const sortBy = q.sortBy ?? 'price';
+    const order = q.order ?? (sortBy === 'rating' ? 'desc' : 'asc');
+    const direction = order === 'asc' ? 1 : -1;
+    const value = (r: (typeof results)[number]) =>
+      sortBy === 'price' ? r.cheapestPricePerNight : r.ratingAvg;
+    results.sort((a, b) => (value(a) - value(b)) * direction);
+
+    // 5. Page of 10 (GEN-05)
+    const start = (page - 1) * PAGE_SIZE;
+    return {
+      data: results.slice(start, start + PAGE_SIZE),
+      total: results.length,
+      page,
+      limit: PAGE_SIZE,
+    };
+  }
+
+  // ===============================================================
+  // HTL-15: free rooms of one hotel for a stay, with the total price (public)
+  // ===============================================================
+  async getAvailableRooms(hotelId: string, checkIn: string, checkOut: string) {
+    const hotel = await this.findHotelById(hotelId); // 404 for missing / deactivated
+    this.assertStayDates(checkIn, checkOut);
+
+    const nights = this.nightCount(checkIn, checkOut);
+    const free = await this.findFreeRooms([hotel._id], checkIn, checkOut);
+
+    return {
+      hotelId: String(hotel._id),
+      checkIn,
+      checkOut,
+      nights,
+      rooms: free
+        .sort((a, b) => a.pricePerNight - b.pricePerNight)
+        .map((r) => ({
+          roomId: String(r._id),
+          roomNumber: r.roomNumber,
+          type: r.type,
+          beds: r.beds,
+          maxOccupancy: r.maxOccupancy,
+          pricePerNight: r.pricePerNight,
+          totalPrice: this.round2(nights * r.pricePerNight),
+        })),
+    };
+  }
+
+  // ===============================================================
+  // HTL-02: hotel details, plus available rooms when dates are given (public)
+  // ===============================================================
+  async getHotelDetails(hotelId: string, checkIn?: string, checkOut?: string) {
+    const hotel = await this.findHotelById(hotelId);
+    if (!checkIn && !checkOut) return hotel;
+    if (!checkIn || !checkOut) {
+      throw new BadRequestException('Please give both a check-in and a check-out date.');
+    }
+    const { nights, rooms } = await this.getAvailableRooms(hotelId, checkIn, checkOut);
+    return { ...hotel.toObject(), checkIn, checkOut, nights, availableRooms: rooms };
   }
 
   // ---------------------------------------------------------------
@@ -454,11 +588,18 @@ export class HotelsService {
       throw new NotFoundException('Hotel not found');
     }
   }
-   // ---------------------------------------------------------------
+
+  // ---------------------------------------------------------------
+  // ACC-13: admin loads a hotel (active OR deactivated) to create a moderator.
+  // ---------------------------------------------------------------
+  findHotelForAdmin(hotelId: string): Promise<HotelDocument> {
+    return this.getHotelOrThrow(hotelId);
+  }
+
+  // ---------------------------------------------------------------
   // ACC-15: admin deactivates / reactivates a hotel (called by the admin module).
   // Existing Confirmed bookings stay valid; the hotel is just hidden and unbookable.
   // ---------------------------------------------------------------
-
   async setHotelActive(hotelId: string, isActive: boolean): Promise<HotelDocument> {
     if (!isValidObjectId(hotelId)) {
       throw new BadRequestException('Invalid hotel id');
@@ -524,12 +665,10 @@ export class HotelsService {
     return city.countryCode;
   }
 
-  // NEW (calendars): start <= end, and not entirely in the past
+  // Calendar ranges: start <= end, and not entirely in the past
   private assertValidRange(start: string, end: string): void {
     if (end < start) {
-      throw new BadRequestException(
-        'The end date must be on or after the start date.',
-      );
+      throw new BadRequestException('The end date must be on or after the start date.');
     }
     if (end < todayUtc()) {
       throw new BadRequestException(
@@ -538,17 +677,17 @@ export class HotelsService {
     }
   }
 
-  // NEW (calendars): which list a kind is stored in
+  // Which list a kind is stored in
   private fieldFor(kind: RangeKind): 'availabilityRanges' | 'blockedRanges' {
     return kind === 'available' ? 'availabilityRanges' : 'blockedRanges';
   }
 
-  // NEW (calendars): the saved ranges of one kind, with their _id
+  // The saved ranges of one kind, with their _id
   private rangesOf(room: RoomDocument, kind: RangeKind): StoredRange[] {
     return room[this.fieldFor(kind)] as unknown as StoredRange[];
   }
 
-  // NEW (calendars): find a range by id in either list -> tells us its kind
+  // Find a range by id in either list -> tells us its kind
   private findRange(room: RoomDocument, rangeId: string): { kind: RangeKind; range: StoredRange } {
     if (!isValidObjectId(rangeId)) {
       throw new BadRequestException('Invalid range id');
@@ -560,7 +699,7 @@ export class HotelsService {
     throw new NotFoundException('Range not found for this room');
   }
 
-  // NEW (calendars): nights in "old" that are NOT in "next" (up to 2 pieces: left and right)
+  // Nights in "old" that are NOT in "next" (up to 2 pieces: left and right)
   private removedParts(old: NightRange, next: NightRange): NightRange[] {
     const parts: NightRange[] = [];
     if (old.start < next.start) {
@@ -574,7 +713,7 @@ export class HotelsService {
     return parts;
   }
 
-  // NEW (calendars): is this one night inside any of the ranges?
+  // Is this one night inside any of the ranges?
   private containsNight(ranges: NightRange[], date: string): boolean {
     return ranges.some((r) => r.start <= date && date <= r.end);
   }
@@ -595,5 +734,59 @@ export class HotelsService {
       if (next > end) return true;           // passed the last night -> fully covered
     }
     return false;
+  }
+
+  // Search + free-rooms list: active rooms of these hotels that are open every
+  // night, not blocked, and not taken (Confirmed or unexpired hold)
+  private async findFreeRooms(
+    hotelIds: Types.ObjectId[],
+    checkIn: string,
+    checkOut: string,
+  ): Promise<LeanRoom[]> {
+    const firstNight = checkIn;
+    const lastNight = addDays(checkOut, -1);
+
+    const rooms = (await this.roomModel
+      .find({ hotelId: { $in: hotelIds }, isActive: true })
+      .lean()) as unknown as LeanRoom[];
+
+    const candidates = rooms.filter(
+      (r) =>
+        this.coversAllNights(r.availabilityRanges, firstNight, lastNight) &&
+        !r.blockedRanges.some((b) => this.overlaps(b, firstNight, lastNight)),
+    );
+    if (candidates.length === 0) return [];
+
+    // Ask member 6 ONCE for all candidate rooms
+    const taken = new Set(
+      await this.hotelBookingsService.getTakenRoomIds(
+        candidates.map((r) => String(r._id)),
+        firstNight,
+        lastNight,
+      ),
+    );
+    return candidates.filter((r) => !taken.has(String(r._id)));
+  }
+
+  // HTL-11: check-out after check-in, check-in not in the past
+  private assertStayDates(checkIn: string, checkOut: string): void {
+    if (checkOut <= checkIn) {
+      throw new BadRequestException('The check-out date must be after the check-in date.');
+    }
+    if (checkIn < todayUtc()) {
+      throw new BadRequestException('The check-in date cannot be in the past.');
+    }
+  }
+
+  // Number of nights in a stay ("2026-12-20" -> "2026-12-23" = 3)
+  private nightCount(checkIn: string, checkOut: string): number {
+    return Math.round(
+      (Date.parse(`${checkOut}T00:00:00Z`) - Date.parse(`${checkIn}T00:00:00Z`)) / 86_400_000,
+    );
+  }
+
+  // Money: round to 2 decimals
+  private round2(n: number): number {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 }

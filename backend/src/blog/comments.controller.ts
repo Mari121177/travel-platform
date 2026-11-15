@@ -23,7 +23,9 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 // logged-in user: the id comes from the session, never from the request body.
 @ApiTags('Blog')
 @ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+@ApiUnauthorizedResponse({
+  description: 'Not logged in, or the session expired',
+})
 @Roles(Role.User)
 @ApiForbiddenResponse({ description: 'Only registered users can use comments' })
 @Controller()
@@ -48,7 +50,9 @@ export class CommentsController {
   @Patch('comments/:id')
   @ApiOperation({ summary: 'BLG-07: edit my comment' })
   @ApiOkResponse({ description: 'The updated comment' })
-  @ApiBadRequestResponse({ description: 'Text empty or longer than 500 characters' })
+  @ApiBadRequestResponse({
+    description: 'Text empty or longer than 500 characters',
+  })
   @ApiForbiddenResponse({ description: "Someone else's comment" })
   @ApiNotFoundResponse({ description: 'Comment not found' })
   update(
@@ -64,7 +68,10 @@ export class CommentsController {
   @ApiOkResponse({ description: 'Returns { deleted: true, id }' })
   @ApiForbiddenResponse({ description: "Someone else's comment" })
   @ApiNotFoundResponse({ description: 'Comment not found' })
-  remove(@CurrentUser('id') userId: string, @Param() params: CommentIdParamDto) {
+  remove(
+    @CurrentUser('id') userId: string,
+    @Param() params: CommentIdParamDto,
+  ) {
     return this.commentsService.remove(userId, params.id);
   }
 }
