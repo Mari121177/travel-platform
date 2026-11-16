@@ -275,70 +275,6 @@ contract with member 6.
 ================================================
 
 ================================================
-Date: 2026-11-12
-Student: Ghada Haitham
-Tool: Claude
-Related Requirement: FLT-11, FLT-12, FLT-15, FLT-17
-Category: Requirements analysis
-Prompt:
-I'm member 3 (flight search, filters, sorting, airports). I only want you
-to read the zip file and the project description. [Later: link to the
-requirements Excel sheet, "I didn't find FLT-13, 14, 16 or 18".]
-How the output was used:
-Claude summarized my module's scope and the rules in the requirements sheet
-(passenger types, infant fare, price filter, sorting, local airport time).
-I checked it against the Excel sheet [and the project PDF]. Found that
-FLT-13, 14, 16 and 18 don't exist in the sheet.
-================================================
-
-================================================
-Date: 2026-11-12
-Student: Ghada Haitham
-Tool: Claude
-Related Requirement: FLT-02 (not mine), FLT-11
-Category: Process / debugging
-Prompt:
-Where do I begin? And how should I approach this project? [Pasted Mariam's review
-comments on Malk's FLT-02 PR.]
-How the output was used:
-Claude explained the branch and commit workflow. After the review on Malk's
-PR, I realised FLT-02 belongs to her and moved to
-feature/FLT-11-flight-search. I applied the review lessons (DTO validation,
-@Public) to my own DTO.
-================================================
-
-================================================
-Date: 2026-11-12
-Student: Ghada Haitham
-Tool: Claude
-Related Requirement: FLT-11, FLT-12, FLT-15
-Category: Code generation
-Prompt:
-"Could you help me make the search query DTO and helper
-functions with their tests?"
-How the output was used:
-Claude generated search-flights-query.dto.ts, search.constants.ts,
-search.utils.ts and search.utils.spec.ts (local date to UTC range,
-passenger rules, price check, sorting). [I read through each function and
-can explain it.] [I ran tsc/lint/jest on my machine.]
-================================================
-
-================================================
-Date: 2026-11-13
-Student: Ghada Haitham
-Tool: Claude
-Related Requirement: FLT-11, FLT-12, FLT-15
-Category: Code generation
-Prompt:
-"I want to create placeholders while member 2 and member 4's work haven't
-been done yet"
-How the output was used:
-Claude generated search.placeholders.ts: a SearchableFlight interface that
-stands in for member 2's Flight schema, and a getHeldSeats() stub that
-returns 0 until member 4's holds exist. Both are temporary and will be
-replaced when their work is merged into develop. [I reviewed the file and
-the type-check passes on my machine: yes]
-================================================
 Date: 2026-11-13
 Student: Habiba Khaled
 Tool: Claude
@@ -540,7 +476,18 @@ Help me write the payments module.
 How the output was used:
 Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
 webhook [200], booking Confirmed, then cancel and full refund.
+
 ================================================
+Date: 2026-11-15
+Student: Habiba
+Tool: Claude
+Related Requirement: ITN-21
+Prompt:
+Write public itinerary search (keyword on title, country or city, duration and country/city filters), a read-only public view, and a clone endpoint that copies days, activities, budgets and transport costs into a private copy crediting the original author. I pasted my itineraries service, view helpers, schemas, User and City schemas, and a 500 error from the search.
+How the output was used:
+Used the generated DTO, service and controller, added clonedFrom to the itinerary schema, registered the new controller before the :id routes. Fixed the 500 (older itineraries without a days array) with $ifNull. Tested search, filters, public view and clone in Swagger with two users.
+================================================
+
 Date: 2026-11-13
 Student: Mariam
 Tool: OpenCode
@@ -591,6 +538,109 @@ How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
 
+Date: 2026-11-16
+Student: Habiba
+Tool: Claude
+Related Requirement: GEN-10
+Prompt:
+Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
+How the output was used:
+Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-12, ACC-12
+Category: Code generation
+Prompt:
+Add the public author page GET /api/authors/:id with the author's name, join date, published posts and public itineraries, and hide deactivated users.
+How the output was used:
+Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-17
+Category: Requirements analysis
+Prompt:
+I'm member 3 (flight search, filters, sorting, airports). I only want you
+to read the zip file and the project description. [Later: link to the
+requirements Excel sheet, "I didn't find FLT-13, 14, 16 or 18".]
+How the output was used:
+Claude summarized my module's scope and the rules in the requirements sheet
+(passenger types, infant fare, price filter, sorting, local airport time).
+I checked it against the Excel sheet [and the project PDF]. Found that
+FLT-13, 14, 16 and 18 don't exist in the sheet.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02 (not mine), FLT-11
+Category: Process / debugging
+Prompt:
+Where do I begin? And how should I approach this project? [Pasted Mariam's review
+comments on Malk's FLT-02 PR.]
+How the output was used:
+Claude explained the branch and commit workflow. After the review on Malk's
+PR, I realised FLT-02 belongs to her and moved to
+feature/FLT-11-flight-search. I applied the review lessons (DTO validation,
+@Public) to my own DTO.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"Could you help me make the search query DTO and helper
+functions with their tests?"
+How the output was used:
+Claude generated search-flights-query.dto.ts, search.constants.ts,
+search.utils.ts and search.utils.spec.ts (local date to UTC range,
+passenger rules, price check, sorting). [I read through each function and
+can explain it.] [I ran tsc/lint/jest on my machine.]
+================================================
+================================================
+Date: 2026-11-13
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"I want to create placeholders while member 2 and member 4's work haven't
+been done yet"
+How the output was used:
+Claude generated search.placeholders.ts: a SearchableFlight interface that
+stands in for member 2's Flight schema, and a getHeldSeats() stub that
+returns 0 until member 4's holds exist. Both are temporary and will be
+replaced when their work is merged into develop. [I reviewed the file and
+the type-check passes on my machine: yes]
+================================================
 ================================================
 Date: 2026-11-15
 Student: Ghada Haitham
@@ -607,7 +657,6 @@ malformed airport codes and impossible dates, and the rules that compare fields 
 Local airport times use the built-in Intl time zone support, so no new package was added. 
 A temporary placeholder file stood in for the flight schema until it was merged. I reviewed the code and ran the unit tests.
 ================================================
-
 ================================================
 Date: 2026-11-15
 Student: Ghada Haitham
@@ -624,7 +673,6 @@ The past-date check compares the departure date with today's date in the departu
 The price filter and sort use the per-person fare and each cabin shows the party total separately. 
 I reviewed the code and tested using Swagger.
 ================================================
-
 ================================================
 Date: 2026-11-15
 Student: Ghada Haitham
@@ -636,7 +684,6 @@ Replace my placeholders with the real flight, cabin and airline schemas, and wri
 How the output was used:
 The search rules are in one function without database access, covered by unit tests, and the database queries are in FlightSearchService. Malk's CabinClass enum is reused. Flights that already departed are not shown, which is an addition to the requirements. I fixed a missing-file import error in my own folder. I reviewed the code [and ran the unit tests: result].
 ================================================
-
 ================================================
 Date: 2026-11-16
 Student: Ghada Haitham

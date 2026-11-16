@@ -11,6 +11,7 @@ import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ItinerariesService } from './itineraries.service';
 import { activityView } from './plan-items';
 import { Activity, ActivityDocument } from './schemas/activity.schema';
+import { ActivityImagesService } from './activity-images.service';
 
 const isNil = (value: unknown): value is null | undefined =>
   value === null || value === undefined;
@@ -26,6 +27,7 @@ export class ActivitiesService {
     @InjectModel(Activity.name)
     private readonly activityModel: Model<ActivityDocument>,
     private readonly itinerariesService: ItinerariesService,
+    private readonly activityImagesService: ActivityImagesService,
   ) {}
 
   async create(
@@ -91,8 +93,9 @@ export class ActivitiesService {
       activity.itineraryId.toString(),
       user,
     );
-    // TODO ITN-12: also delete this activity's image files
     await activity.deleteOne();
+    // ITN-12: the activity is gone, so its image files go too
+    await this.activityImagesService.deleteUnusedFiles(activity.images);
     return { message: 'Activity deleted' };
   }
 

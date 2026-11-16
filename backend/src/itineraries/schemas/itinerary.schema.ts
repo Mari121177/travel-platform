@@ -11,6 +11,21 @@ export const ItineraryVisibility = {
 export type ItineraryVisibility =
   (typeof ItineraryVisibility)[keyof typeof ItineraryVisibility];
 
+/** ITN-21: where a cloned itinerary came from (credits the original author). */
+@Schema({ _id: false })
+export class ClonedFrom {
+  @Prop({ type: SchemaTypes.ObjectId, required: true })
+  itineraryId!: Types.ObjectId;
+
+  @Prop({ type: SchemaTypes.ObjectId, required: true })
+  authorId!: Types.ObjectId;
+
+  // Saved as text, so the credit stays even if the original is deleted
+  @Prop({ type: String, required: true })
+  authorName!: string;
+}
+export const ClonedFromSchema = SchemaFactory.createForClass(ClonedFrom);
+
 /**
  * ITN-01: an itinerary owned by one registered user.
  * Days are stored inside it (ITN-05). Activities, budget entries and transport
@@ -54,6 +69,9 @@ export class Itinerary {
   // Name to confirm with Mariam, who owns the admin side.
   @Prop({ type: Boolean, default: false, index: true })
   isHidden!: boolean;
+  // ITN-21: set only on clones
+  @Prop({ type: ClonedFromSchema, default: null })
+  clonedFrom!: ClonedFrom | null;
 
   createdAt?: Date;
   updatedAt?: Date;
