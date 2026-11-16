@@ -684,6 +684,7 @@ Replace my placeholders with the real flight, cabin and airline schemas, and wri
 How the output was used:
 The search rules are in one function without database access, covered by unit tests, and the database queries are in FlightSearchService. Malk's CabinClass enum is reused. Flights that already departed are not shown, which is an addition to the requirements. I fixed a missing-file import error in my own folder. I reviewed the code [and ran the unit tests: result].
 ================================================
+
 ================================================
 Date: 2026-11-16
 Student: Ghada Haitham
@@ -697,4 +698,38 @@ without editing Malk's module.
 How the output was used:
 The controller is public so guests can search. 
 FlightSearchModule is registered with one line in app.module.ts. I reviewed the code and tested in Swagger.
+================================================
+
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02, GEN-05
+Category: Code generation
+Prompt:
+Write the query DTO and service for a public, read-only airports list (FLT-02):
+filters q (name or IATA code), countryCode and cityId, a page parameter, fixed
+page size 10 with no limit parameter, rejecting unknown and repeated params,
+reusing the existing Airport model from reference-data, plus a getByCodes
+method that flight search can use.
+How the output was used:
+The controller is public so guests can search. 
+The service reads the existing Airport model from reference-data 
+(no new schema or seeder) and has a fixed page size of 10. 
+Unknown and repeated query parameters are rejected (400). I reviewed the code and tested in Swagger.
+================================================
+
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02
+Category: Code generation
+Prompt:
+Could you help me write the public GET /api/airports controller (FLT-02) with Swagger
+decorators?
+How the output was used:
+The controller is public and read-only, so guests can list airports before searching.
+I reviewed the code and tested in Swagger without logging in:
+GET /api/airports (200), ?countryCode=EG, ?q=dubai, ?page=2, and 400 for ?page=0 and ?countryCode=EGY.
 ================================================
