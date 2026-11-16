@@ -558,3 +558,24 @@ Add the public author page GET /api/authors/:id with the author's name, join dat
 How the output was used:
 Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
 ================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================

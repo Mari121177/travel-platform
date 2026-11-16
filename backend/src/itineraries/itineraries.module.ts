@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Post, PostSchema } from '../blog/schemas/post.schema';
+import { UploadsModule } from '../uploads/uploads.module';
 import { UsersModule } from '../users/users.module';
 import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
+import { ActivityImagesController } from './activity-images.controller';
+import { ActivityImagesService } from './activity-images.service';
 import { BudgetsController } from './budgets.controller';
 import { BudgetsService } from './budgets.service';
 import { ExchangeRatesService } from './exchange-rates.service';
@@ -29,12 +33,14 @@ import { TransportCostsService } from './transport-costs.service';
 @Module({
   imports: [
     UsersModule,
+    UploadsModule,
     MongooseModule.forFeature([
       { name: Itinerary.name, schema: ItinerarySchema },
       { name: Activity.name, schema: ActivitySchema },
       { name: BudgetEntry.name, schema: BudgetEntrySchema },
       { name: TransportCost.name, schema: TransportCostSchema },
       { name: ExchangeRate.name, schema: ExchangeRateSchema },
+      { name: Post.name, schema: PostSchema },
     ]),
   ],
   controllers: [
@@ -42,6 +48,7 @@ import { TransportCostsService } from './transport-costs.service';
     ItinerariesController,
     ItineraryDaysController,
     ActivitiesController,
+    ActivityImagesController,
     BudgetsController,
     TransportCostsController,
   ],
@@ -50,6 +57,7 @@ import { TransportCostsService } from './transport-costs.service';
     ItinerariesService,
     ItineraryDaysService,
     ActivitiesService,
+    ActivityImagesService,
     BudgetsService,
     TransportCostsService,
     ExchangeRatesService,
@@ -59,6 +67,7 @@ import { TransportCostsService } from './transport-costs.service';
     ItinerariesService,
     ItineraryDaysService,
     ActivitiesService,
+    ActivityImagesService,
     BudgetsService,
     TransportCostsService,
     ExchangeRatesService,
