@@ -476,7 +476,18 @@ Help me write the payments module.
 How the output was used:
 Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
 webhook [200], booking Confirmed, then cancel and full refund.
+
 ================================================
+Date: 2026-11-15
+Student: Habiba
+Tool: Claude
+Related Requirement: ITN-21
+Prompt:
+Write public itinerary search (keyword on title, country or city, duration and country/city filters), a read-only public view, and a clone endpoint that copies days, activities, budgets and transport costs into a private copy crediting the original author. I pasted my itineraries service, view helpers, schemas, User and City schemas, and a 500 error from the search.
+How the output was used:
+Used the generated DTO, service and controller, added clonedFrom to the itinerary schema, registered the new controller before the :id routes. Fixed the 500 (older itineraries without a days array) with $ifNull. Tested search, filters, public view and clone in Swagger with two users.
+================================================
+
 Date: 2026-11-13
 Student: Mariam
 Tool: OpenCode
@@ -526,6 +537,49 @@ Asked Claude to check the flight and cabin schemas, DTOs, service, controller an
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+
+Date: 2026-11-16
+Student: Habiba
+Tool: Claude
+Related Requirement: GEN-10
+Prompt:
+Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
+How the output was used:
+Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-12, ACC-12
+Category: Code generation
+Prompt:
+Add the public author page GET /api/authors/:id with the author's name, join date, published posts and public itineraries, and hide deactivated users.
+How the output was used:
+Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================
+================================================
 Date: 2026-11-01
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -535,7 +589,7 @@ Guide me, as team leader, through the repository setup: the NestJS backend, the 
 How the output was used:
 I followed the steps and committed them as the scaffold, database connection, core skeleton and README commits (95e86e1, 738c3f2, 8b0b726, 908f147). Claude's output was reviewed again later in the code review on 2026-11-07.
 ================================================
-
+================================================
 Date: 2026-11-05
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -545,7 +599,7 @@ Implement user registration for the backend: a user schema, a register DTO that 
 How the output was used:
 I used the generated user schema, register DTO and auth service as the base for the ACC-01 commit (a308b71), and checked the behavior in Swagger on 2026-11-07 (duplicate email, invalid email, weak password, missing consent, role injection).
 ================================================
-
+================================================
 Date: 2026-11-07
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -555,7 +609,7 @@ Review all my auth, users and common code against the requirement sheet and the 
 How the output was used:
 Claude reviewed the login with lockout (5 failed attempts, 15 minutes) and the httpOnly access and refresh cookies that were written with Claude's help in the earlier conversation. I ran 11 tests in Swagger and Atlas (wrong password, unknown email, suspended account, lockout, cookies) and committed the login work (ad34974).
 ================================================
-
+================================================
 Date: 2026-11-07
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -565,7 +619,7 @@ Same code review as above.
 How the output was used:
 Claude pointed out that the global exception filter returned "Internal server error" for unexpected errors without logging them. I replaced the file with a version that logs unexpected errors using the Nest Logger (commit 0018fc8).
 ================================================
-
+================================================
 Date: 2026-11-07
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -575,7 +629,7 @@ Same code review as above.
 How the output was used:
 Claude noticed that the README did not mention JWT_SECRET, although the backend refuses to start without it. I replaced step 3 of the backend setup with the new text, including the command that generates a secret (commit 9332cb4).
 ================================================
-
+================================================
 Date: 2026-11-07
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -585,7 +639,7 @@ Same code review as above.
 How the output was used:
 Claude found that .gitignore had two patterns joined on one line (.DS_Store*.tsbuildinfo). I replaced it with two separate lines (commit 8e35044).
 ================================================
-
+================================================
 Date: 2026-11-08
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -595,7 +649,7 @@ Seed the reference data (countries, cities, airports, attractions) from the offi
 How the output was used:
 Claude provided a CSV parser, four schemas, a seeder that upserts by key at startup, and a service that exposes the supported currencies. Claude compiled and ran it in a test project with my package versions before I used it. I ran it against Atlas (8 documents in each collection, no duplicates after a restart) and committed it (5ce1c5e). While checking Atlas I found that the airports collection had already been filled by another team member's script. That team member's pull request has not been merged; I requested changes in its review (see the airports review entry of 2026-11-10).
 ================================================
-
+================================================
 Date: 2026-11-09
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -605,7 +659,7 @@ Build what my teammates asked me for: @Public(), @Roles() and @CurrentUser(), gl
 How the output was used:
 Claude wrote the decorators, the AuthUser type, the two global guards and the new endpoints, and tested them with a simulated user store (16 checks) before I used them. I fixed one mistake of mine (the controller code went into app.controller.ts first), then ran 10 tests in Swagger and Atlas (not logged in, session expiry, suspension, logout and revocation) and committed it (c6a33e2).
 ================================================
-
+================================================
 Date: 2026-11-09
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -615,7 +669,7 @@ Review a teammate's pull request (payment, refund and policy acceptance schemas)
 How the output was used:
 Claude checked the schemas against PAY-01 to PAY-04 and the contract file for the booking modules. I merged pull request #6 (merge commit b88713b) and left a review comment with follow-up items for the author: one platform currency constant, Stripe amounts as integer cents, a unique index on refunds, and injection tokens for the booking contract.
 ================================================
-
+================================================
 Date: 2026-11-10
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -625,7 +679,7 @@ Build POST /api/auth/refresh for my NestJS auth module: verify the refresh token
 How the output was used:
 Claude wrote the refresh method and route in auth.service.ts, auth.controller.ts and users.service.ts, then compiled them and ran 12 checks with my real files and an in-memory user store (rotation, reuse of the old token, two parallel requests, 30 minutes of inactivity, suspended and deactivated accounts, a temporary-password account, logout). I ran 8 tests in Swagger and Atlas and committed it (ab82ef8); it was merged as pull request #8.
 ================================================
-
+================================================
 Date: 2026-11-10
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -635,7 +689,7 @@ Review a teammate's airports pull request (FLT-02) from its diff file against th
 How the output was used:
 Claude found a duplicate Airport schema and a seed script (the reference-data module already seeds the airports), a missing @Public() so guests got 401, unvalidated page and limit (a negative limit produced a negative skip), and unvalidated query parameters. I posted the review comment Claude wrote with a Request changes review on pull request #1. It is not merged yet.
 ================================================
-
+================================================
 Date: 2026-11-10
 Student: Mariam
 Tool: Claude (claude.ai)
@@ -645,7 +699,7 @@ Review a teammate's in-app notifications pull request (GEN-01) from its diff fil
 How the output was used:
 Claude found that every notification route read the user id from an x-user-id request header, so any logged-in user could read another user's notifications. I requested changes on pull request #2 using the review comment Claude wrote, which includes a corrected controller that uses @CurrentUser('id'). It is not merged yet.
 ================================================
-
+================================================
 Date: 2026-11-10
 Student: Mariam
 Tool: Claude (claude.ai)
