@@ -476,7 +476,18 @@ Help me write the payments module.
 How the output was used:
 Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
 webhook [200], booking Confirmed, then cancel and full refund.
+
 ================================================
+Date: 2026-11-15
+Student: Habiba
+Tool: Claude
+Related Requirement: ITN-21
+Prompt:
+Write public itinerary search (keyword on title, country or city, duration and country/city filters), a read-only public view, and a clone endpoint that copies days, activities, budgets and transport costs into a private copy crediting the original author. I pasted my itineraries service, view helpers, schemas, User and City schemas, and a 500 error from the search.
+How the output was used:
+Used the generated DTO, service and controller, added clonedFrom to the itinerary schema, registered the new controller before the :id routes. Fixed the 500 (older itineraries without a days array) with $ifNull. Tested search, filters, public view and clone in Swagger with two users.
+================================================
+
 Date: 2026-11-13
 Student: Mariam
 Tool: OpenCode
