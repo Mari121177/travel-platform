@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -11,6 +10,7 @@ import { Model, Types } from 'mongoose';
 import { AccountStatus } from '../common/enums/account-status.enum';
 import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { AirlinesService } from '../airlines/airlines.service';
 import { HotelsService } from '../hotels/hotels.service';
 import { NotificationType } from '../notifications/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -39,6 +39,7 @@ export class AdminAccountsService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly usersService: UsersService,
     private readonly hotelsService: HotelsService,
+    private readonly airlinesService: AirlinesService,
     private readonly notificationsService: NotificationsService,
     private readonly auditLogService: AuditLogService,
   ) {}
@@ -82,16 +83,15 @@ export class AdminAccountsService {
   // ACC-13: create a moderator linked to exactly one provider. The temporary
   // password must be replaced at the first login (mustChangePassword).
   async createModerator(admin: AuthUser, dto: CreateModeratorDto) {
-    if (dto.type !== ModeratorType.Hotel) {
-      // The Airline schema and its provider management belong to the flights
-      // module. Add this branch when FLT-01 is merged.
-      throw new BadRequestException(
-        'Airline moderators are not available yet. Only hotel moderators can be created for now.',
-      );
-    }
-
-    // Includes deactivated hotels: an admin may still need a moderator for one.
-    const hotel = await this.hotelsService.findHotelForAdmin(dto.providerId);
+    // Includes deactivated providers: an admin may still need a moderator for one.
+    const provider =
+      dto.type === ModeratorType.Hotel
+        ? await this.hotelsService.findHotelForAdmin(dto.providerId)
+        : await this.airlinesService.findAirlineForAdmin(dto.providerId);
+    const role =
+      dto.type === ModeratorType.Hotel
+        ? Role.HotelModerator
+        : Role.AirlineModerator;
 
     const email = dto.email.trim().toLowerCase();
     const existing = await this.usersService.findByEmail(email);
@@ -108,8 +108,8 @@ export class AdminAccountsService {
         name: dto.name,
         email,
         passwordHash,
-        role: Role.HotelModerator,
-        assignedProviderId: new Types.ObjectId(hotel._id),
+        role,
+        assignedProviderId: new Types.ObjectId(provider._id),
         mustChangePassword: true,
         // Admin-created accounts have no self-registration consent screen.
         consentAcceptedAt: new Date(),
@@ -130,14 +130,14 @@ export class AdminAccountsService {
       targetLabel: created.email,
       details: {
         role: created.role,
-        providerType: ModeratorType.Hotel,
-        providerId: hotel._id.toString(),
+        providerType: dto.type,
+        providerId: provider._id.toString(),
       },
     });
 
     return {
       ...this.toAccount(created as AccountDocument),
-      assignedProviderId: hotel._id.toString(),
+      assignedProviderId: provider._id.toString(),
       mustChangePassword: true,
     };
   }

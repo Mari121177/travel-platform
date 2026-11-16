@@ -526,3 +526,13 @@ Asked Claude to check the flight and cabin schemas, DTOs, service, controller an
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+Date: 2026-11-16
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-13, GEN-07, GEN-13
+Category: Code generation
+Prompt:
+Extend the ACC-13 moderator creation endpoint so it supports both hotel and airline providers now that the Airline schema is merged.
+How the output was used:
+Added an admin-only airline lookup that includes deactivated airlines, reused the existing temporary-password and duplicate-email flow, set role airline_moderator and assignedProviderId to the airline id, generalized the audit entry providerType, and updated the Swagger descriptions. Build and lint pass; the hotel path remains unchanged.
+================================================
