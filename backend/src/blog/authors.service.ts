@@ -121,7 +121,7 @@ export class AuthorsService {
           title: itinerary.title,
           countries: itinerary.countries,
           startDate: itinerary.startDate,
-          dayCount: itinerary.days.length,
+          dayCount: itinerary.days?.length ?? 0,
           updatedAt: itinerary.updatedAt,
         })),
         totalItineraries,
