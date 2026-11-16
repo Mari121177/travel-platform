@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AdminModule } from './admin/admin.module';
 import { AirlinesModule } from './airlines/airlines.module';
 import { FlightsModule } from './flights/flights.module';
+import { FlightSearchModule } from './flights/search/flight-search.module';
 import { FlightBookingsModule } from './flight-bookings/flight-bookings.module';
 import { HotelsModule } from './hotels/hotels.module';
 import { HotelBookingsModule } from './hotel-bookings/hotel-bookings.module';
@@ -32,6 +33,7 @@ import { ReferenceDataModule } from './reference-data/reference-data.module';
     AdminModule,
     AirlinesModule,
     FlightsModule,
+    FlightSearchModule,
     FlightBookingsModule,
     HotelsModule,
     HotelBookingsModule,
