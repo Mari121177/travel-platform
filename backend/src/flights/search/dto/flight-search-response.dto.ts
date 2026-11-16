@@ -104,6 +104,9 @@ export class FlightSearchPageDto {
 
   @ApiProperty({ example: 10, description: 'Fixed page size (GEN-05)' })
   pageSize!: number;
+
+  @ApiProperty({ example: 3 })
+  totalPages!: number;
 }
 
 // FLT-12: a one-way search fills only `outbound`; a round trip also fills `return`

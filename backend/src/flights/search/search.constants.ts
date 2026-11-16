@@ -1,12 +1,8 @@
-// Cabin categories are fixed by FLT-04. If the Flight schema (FLT-04) defines
-// its own enum, switch to it so both sides use the same values.
-export const CABIN_CLASSES = [
-  'Economy',
-  'Premium Economy',
-  'Business',
-  'First',
-] as const;
-export type CabinClass = (typeof CABIN_CLASSES)[number];
+// Cabin categories come from member 2's enum (FLT-04), so both sides share them
+import { CabinClass } from '../enums/flight.enums';
+
+export { CabinClass };
+export const CABIN_CLASSES = Object.values(CabinClass);
 
 // FLT-15: results can be sorted by price, duration or departure time
 export const SORT_FIELDS = ['price', 'duration', 'departureTime'] as const;
