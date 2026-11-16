@@ -30,7 +30,7 @@ export class LikesService {
       // else's draft exists.
       const post = await this.postModel
         .findOneAndUpdate(
-          { _id: postId, status: PostStatus.Published },
+          { _id: postId, status: PostStatus.Published, isHidden: { $ne: true } },
           { $inc: { likeCount: 1 } },
           { new: true, session },
         )

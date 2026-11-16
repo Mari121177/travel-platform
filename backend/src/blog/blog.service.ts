@@ -59,7 +59,9 @@ export class BlogService {
         .sort({ createdAt: -1, _id: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
-        .select('title status createdAt publishedAt likeCount commentCount')
+        .select(
+          'title status isHidden createdAt publishedAt likeCount commentCount',
+        )
         .lean()
         .exec(),
       this.postModel.countDocuments(filter).exec(),

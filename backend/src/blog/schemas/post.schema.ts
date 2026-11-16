@@ -56,6 +56,9 @@ export class Post {
 
   @Prop({ type: Number, default: 0, min: 0 })
   commentCount!: number;
+  /** GEN-10: hidden by an admin. Only the author and admins can see it. */
+  @Prop({ type: Boolean, default: false })
+  isHidden!: boolean;
 
   createdAt?: Date;
   updatedAt?: Date;
