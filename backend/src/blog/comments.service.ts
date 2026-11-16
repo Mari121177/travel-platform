@@ -30,7 +30,11 @@ export class CommentsService {
       // else's draft exists.
       const counted = await this.postModel
         .updateOne(
-          { _id: postId, status: PostStatus.Published },
+          {
+            _id: postId,
+            status: PostStatus.Published,
+            isHidden: { $ne: true },
+          },
           { $inc: { commentCount: 1 } },
           { session },
         )

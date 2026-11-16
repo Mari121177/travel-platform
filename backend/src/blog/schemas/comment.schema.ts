@@ -22,6 +22,9 @@ export class Comment {
     validate: maxCharacters(COMMENT_MAX_LENGTH),
   })
   text!: string;
+  /** GEN-10: hidden by an admin. Only the author and admins can see it. */
+  @Prop({ type: Boolean, default: false })
+  isHidden!: boolean;
 
   createdAt?: Date;
   updatedAt?: Date;

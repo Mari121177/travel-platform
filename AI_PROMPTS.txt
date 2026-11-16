@@ -476,7 +476,18 @@ Help me write the payments module.
 How the output was used:
 Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
 webhook [200], booking Confirmed, then cancel and full refund.
+
 ================================================
+Date: 2026-11-15
+Student: Habiba
+Tool: Claude
+Related Requirement: ITN-21
+Prompt:
+Write public itinerary search (keyword on title, country or city, duration and country/city filters), a read-only public view, and a clone endpoint that copies days, activities, budgets and transport costs into a private copy crediting the original author. I pasted my itineraries service, view helpers, schemas, User and City schemas, and a 500 error from the search.
+How the output was used:
+Used the generated DTO, service and controller, added clonedFrom to the itinerary schema, registered the new controller before the :id routes. Fixed the 500 (older itineraries without a days array) with $ifNull. Tested search, filters, public view and clone in Swagger with two users.
+================================================
+
 Date: 2026-11-13
 Student: Mariam
 Tool: OpenCode
@@ -525,6 +536,49 @@ Prompt:
 Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+
+Date: 2026-11-16
+Student: Habiba
+Tool: Claude
+Related Requirement: GEN-10
+Prompt:
+Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
+How the output was used:
+Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-12, ACC-12
+Category: Code generation
+Prompt:
+Add the public author page GET /api/authors/:id with the author's name, join date, published posts and public itineraries, and hide deactivated users.
+How the output was used:
+Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================
 ================================================
 Date: 2026-11-16
 Student: Mariam
