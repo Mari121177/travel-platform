@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Post, PostSchema } from '../blog/schemas/post.schema';
 import { UploadsModule } from '../uploads/uploads.module';
+import { UsersModule } from '../users/users.module';
 import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { ActivityImagesController } from './activity-images.controller';
@@ -12,6 +14,8 @@ import { ItinerariesController } from './itineraries.controller';
 import { ItinerariesService } from './itineraries.service';
 import { ItineraryDaysController } from './itinerary-days.controller';
 import { ItineraryDaysService } from './itinerary-days.service';
+import { PublicItinerariesController } from './public-itineraries.controller';
+import { PublicItinerariesService } from './public-itineraries.service';
 import { Activity, ActivitySchema } from './schemas/activity.schema';
 import { BudgetEntry, BudgetEntrySchema } from './schemas/budget-entry.schema';
 import {
@@ -28,7 +32,7 @@ import { TransportCostsService } from './transport-costs.service';
 
 @Module({
   imports: [
-    // ITN-12: activity images are stored by the upload code (GEN-08)
+    UsersModule,
     UploadsModule,
     MongooseModule.forFeature([
       { name: Itinerary.name, schema: ItinerarySchema },
@@ -36,9 +40,11 @@ import { TransportCostsService } from './transport-costs.service';
       { name: BudgetEntry.name, schema: BudgetEntrySchema },
       { name: TransportCost.name, schema: TransportCostSchema },
       { name: ExchangeRate.name, schema: ExchangeRateSchema },
+      { name: Post.name, schema: PostSchema },
     ]),
   ],
   controllers: [
+    PublicItinerariesController,
     ItinerariesController,
     ItineraryDaysController,
     ActivitiesController,
@@ -47,6 +53,7 @@ import { TransportCostsService } from './transport-costs.service';
     TransportCostsController,
   ],
   providers: [
+    PublicItinerariesService,
     ItinerariesService,
     ItineraryDaysService,
     ActivitiesService,

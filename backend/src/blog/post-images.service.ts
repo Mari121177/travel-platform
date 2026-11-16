@@ -11,6 +11,7 @@ import { findUrlByImageId, imageIdFromUrl } from '../uploads/image-url';
 import { UploadsService } from '../uploads/uploads.service';
 import type { UploadedImage } from '../uploads/uploads.service';
 import { POST_MAX_IMAGES } from './blog.constants';
+import { Activity } from '../itineraries/schemas/activity.schema';
 import { PostStatus } from './post-status.enum';
 import { Post, PostDocument } from './schemas/post.schema';
 
@@ -24,6 +25,7 @@ export class PostImagesService {
 
   constructor(
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    @InjectModel(Activity.name) private readonly activityModel: Model<Activity>,
     private readonly uploadsService: UploadsService,
   ) {}
 
@@ -92,8 +94,11 @@ export class PostImagesService {
   async deleteUnusedFiles(urls: string[]) {
     const results = await Promise.allSettled(
       urls.map(async (url) => {
-        const stillUsed = await this.postModel.exists({ images: url }).exec();
-        if (!stillUsed) {
+        const [usedByPost, usedByActivity] = await Promise.all([
+          this.postModel.exists({ images: url }).exec(),
+          this.activityModel.exists({ images: url }).exec(),
+        ]);
+        if (!usedByPost && !usedByActivity) {
           await this.uploadsService.deleteByUrl(url);
         }
       }),

@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { findUrlByImageId, imageIdFromUrl } from '../uploads/image-url';
+import { Post } from '../blog/schemas/post.schema';
 import { UploadsService } from '../uploads/uploads.service';
 import type { UploadedImage } from '../uploads/uploads.service';
 import { ItinerariesService } from './itineraries.service';
@@ -28,6 +29,7 @@ export class ActivityImagesService {
   constructor(
     @InjectModel(Activity.name)
     private readonly activityModel: Model<ActivityDocument>,
+    @InjectModel(Post.name) private readonly postModel: Model<Post>,
     private readonly itinerariesService: ItinerariesService,
     private readonly uploadsService: UploadsService,
   ) {}
@@ -96,10 +98,11 @@ export class ActivityImagesService {
   async deleteUnusedFiles(urls: string[]) {
     const results = await Promise.allSettled(
       urls.map(async (url) => {
-        const stillUsed = await this.activityModel
-          .exists({ images: url })
-          .exec();
-        if (!stillUsed) {
+        const [usedByActivity, usedByPost] = await Promise.all([
+          this.activityModel.exists({ images: url }).exec(),
+          this.postModel.exists({ images: url }).exec(),
+        ]);
+        if (!usedByActivity && !usedByPost) {
           await this.uploadsService.deleteByUrl(url);
         }
       }),
