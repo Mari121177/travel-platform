@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { UsersModule } from '../users/users.module';
 import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { BudgetsController } from './budgets.controller';
@@ -9,6 +10,8 @@ import { ItinerariesController } from './itineraries.controller';
 import { ItinerariesService } from './itineraries.service';
 import { ItineraryDaysController } from './itinerary-days.controller';
 import { ItineraryDaysService } from './itinerary-days.service';
+import { PublicItinerariesController } from './public-itineraries.controller';
+import { PublicItinerariesService } from './public-itineraries.service';
 import { Activity, ActivitySchema } from './schemas/activity.schema';
 import { BudgetEntry, BudgetEntrySchema } from './schemas/budget-entry.schema';
 import {
@@ -25,6 +28,7 @@ import { TransportCostsService } from './transport-costs.service';
 
 @Module({
   imports: [
+    UsersModule,
     MongooseModule.forFeature([
       { name: Itinerary.name, schema: ItinerarySchema },
       { name: Activity.name, schema: ActivitySchema },
@@ -34,6 +38,7 @@ import { TransportCostsService } from './transport-costs.service';
     ]),
   ],
   controllers: [
+    PublicItinerariesController,
     ItinerariesController,
     ItineraryDaysController,
     ActivitiesController,
@@ -41,6 +46,7 @@ import { TransportCostsService } from './transport-costs.service';
     TransportCostsController,
   ],
   providers: [
+    PublicItinerariesService,
     ItinerariesService,
     ItineraryDaysService,
     ActivitiesService,
