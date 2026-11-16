@@ -13,6 +13,7 @@ export interface ActivityItem {
   time?: string | null;
   cost?: number | null;
   currency?: string | null;
+  images?: string[];
 }
 
 export interface BudgetItem {
@@ -54,6 +55,7 @@ export const activityView = (a: ActivityItem) => ({
   time: a.time ?? null,
   cost: a.cost ?? null,
   currency: a.currency ?? null,
+  images: a.images ?? [],
 });
 
 export const budgetView = (b: BudgetItem) => ({

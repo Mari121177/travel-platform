@@ -14,6 +14,7 @@ import { ListMyPostsQueryDto } from './dto/list-my-posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostStatus } from './post-status.enum';
 import { Post, PostDocument } from './schemas/post.schema';
+import { PostImagesService } from './post-images.service';
 
 @Injectable()
 export class BlogService {
@@ -22,6 +23,7 @@ export class BlogService {
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    private readonly postImagesService: PostImagesService,
   ) {}
 
   /** BLG-01: create a post as a draft (default) or published. */
@@ -110,7 +112,6 @@ export class BlogService {
   /** BLG-04: the author deletes their own post. */
   async remove(authorId: string, postId: string) {
     const post = await this.findOwnPost(authorId, postId);
-    // TODO GEN-08: UploadsService.deleteByUrl() for each image, once #16 is merged
 
     // One transaction: the post and its comments and likes are deleted
     // together or not at all. A comment or like being added at the same
@@ -127,6 +128,8 @@ export class BlogService {
         .exec();
       await this.likeModel.deleteMany({ postId: post._id }, { session }).exec();
     });
+    // BLG-10: the post is gone, so its image files go too
+    await this.postImagesService.deleteUnusedFiles(post.images);
     return { deleted: true, id: postId };
   }
 

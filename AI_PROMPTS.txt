@@ -526,3 +526,27 @@ Asked Claude to check the flight and cabin schemas, DTOs, service, controller an
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================

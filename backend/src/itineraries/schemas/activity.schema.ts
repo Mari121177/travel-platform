@@ -52,6 +52,10 @@ export class Activity {
   @Prop({ type: String, uppercase: true, default: null })
   currency?: string | null;
 
+  // ITN-12: URLs from the upload endpoint (GEN-08), at most 5
+  @Prop({ type: [String], default: [] })
+  images!: string[];
+
   createdAt?: Date;
   updatedAt?: Date;
 }
