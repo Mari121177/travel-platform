@@ -13,6 +13,7 @@ import {
 import { Comment } from './schemas/comment.schema';
 import { Like } from './schemas/like.schema';
 import { Post } from './schemas/post.schema';
+import { Role } from '../common/enums/role.enum';
 
 export interface PostListItem {
   _id: Types.ObjectId;
@@ -61,8 +62,8 @@ export class PublicBlogService {
     const { tag, q } = query;
 
     const stages: PipelineStage[] = [
-      // TODO GEN-10: also leave out posts that an admin hid
-      { $match: { status: PostStatus.Published } },
+      // GEN-10: posts that an admin hid are left out of every list
+      { $match: { status: PostStatus.Published, isHidden: { $ne: true } } },
       {
         $lookup: {
           from: this.userModel.collection.name,
@@ -153,8 +154,15 @@ export class PublicBlogService {
     }
     const isAuthor =
       userId !== undefined && post.authorId.toString() === userId;
-    // TODO GEN-10: a hidden post is only for its author and admins
+    const viewer = userId
+      ? await this.userModel.findById(userId).select('role').lean().exec()
+      : null;
+    const isAdmin = viewer?.role === Role.Admin;
     if (post.status !== PostStatus.Published && !isAuthor) {
+      throw new NotFoundException('Post not found');
+    }
+    // GEN-10: a hidden post is only for its author and admins
+    if (post.isHidden && !isAuthor && !isAdmin) {
       throw new NotFoundException('Post not found');
     }
 
@@ -170,7 +178,16 @@ export class PublicBlogService {
 
     const page = commentsPage ?? 1;
     const limit = BLOG_PAGE_SIZE;
-    const filter = { postId: post._id };
+    // GEN-10: hidden comments are only for their author and admins
+    const filter: Record<string, unknown> = { postId: post._id };
+    if (!isAdmin) {
+      filter.$or = userId
+        ? [
+            { isHidden: { $ne: true } },
+            { authorId: new Types.ObjectId(userId) },
+          ]
+        : [{ isHidden: { $ne: true } }];
+    }
     const [comments, totalComments, liked] = await Promise.all([
       this.commentModel
         .find(filter)
@@ -217,6 +234,7 @@ export class PublicBlogService {
           return {
             _id: comment._id,
             text: comment.text,
+            isHidden: comment.isHidden === true,
             createdAt: comment.createdAt,
             author: visible
               ? { _id: commenter._id, name: commenter.name }
