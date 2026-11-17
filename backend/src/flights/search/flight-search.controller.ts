@@ -1,13 +1,16 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Param } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { SearchFlightsResponseDto } from './dto/flight-search-response.dto';
 import { SearchFlightsQueryDto } from './dto/search-flights-query.dto';
+import { FlightDetailsDto } from './dto/flight-details.dto';
 import { FlightSearchService } from './flight-search.service';
 
 // Guests can search flights, so no login is needed (see the Guest role)
@@ -28,5 +31,18 @@ export class FlightSearchController {
   @ApiBadRequestResponse({ description: 'Invalid search criteria' })
   search(@Query() query: SearchFlightsQueryDto) {
     return this.service.search(query);
+  }
+    // Declared after 'search' so that /flights/search is never read as an id
+  @Get(':id')
+  @ApiOperation({
+    summary:
+      'FLT-17: flight details (local times, cabins, baggage, cancellation policy)',
+  })
+  @ApiParam({ name: 'id', description: 'Flight id' })
+  @ApiOkResponse({ type: FlightDetailsDto })
+  @ApiBadRequestResponse({ description: 'Invalid flight id' })
+  @ApiNotFoundResponse({ description: 'Flight not found' })
+  details(@Param('id') id: string) {
+    return this.service.getDetails(id);
   }
 }
