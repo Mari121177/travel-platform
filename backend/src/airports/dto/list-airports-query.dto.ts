@@ -6,6 +6,7 @@ import {
   IsString,
   Matches,
   MaxLength,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -44,5 +45,6 @@ export class ListAirportsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100000)
   page: number = 1;
 }
