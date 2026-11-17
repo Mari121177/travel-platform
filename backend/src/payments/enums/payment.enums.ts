@@ -29,4 +29,6 @@ export enum RefundReason {
   USER_CANCELLATION = 'UserCancellation',
   /** FLT-06: provider cancelled, so 100% refund. */
   PROVIDER_CANCELLATION = 'ProviderCancellation',
+  /** PAY-01: the payment succeeded after the hold expired, so it is refunded in full. */
+  LATE_PAYMENT = 'LatePayment',
 }

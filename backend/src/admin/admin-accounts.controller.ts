@@ -13,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCookieAuth,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -26,6 +27,7 @@ import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { AdminAccountsService } from './admin-accounts.service';
 import { AccountIdParamDto } from './dto/account-id-param.dto';
+import { CreateModeratorDto } from './dto/create-moderator.dto';
 import { ListAccountsQueryDto } from './dto/list-accounts-query.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SuspendAccountDto } from './dto/suspend-account.dto';
@@ -50,6 +52,29 @@ export class AdminAccountsController {
   @ApiForbiddenResponse({ description: 'Admins only' })
   list(@Query() query: ListAccountsQueryDto) {
     return this.accountsService.list(query);
+  }
+
+  @Post('moderators')
+  @ApiOperation({
+    summary:
+      'Create a hotel or airline moderator linked to one provider, with a temporary password (ACC-13)',
+  })
+  @ApiCreatedResponse({
+    description: 'The moderator account. mustChangePassword is true',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid fields or weak temporary password',
+  })
+  @ApiConflictResponse({ description: 'Email is already registered' })
+  @ApiNotFoundResponse({ description: 'Hotel or airline not found' })
+  @ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+  @ApiForbiddenResponse({ description: 'Admins only' })
+  createModerator(
+    @CurrentUser() admin: AuthUser,
+    @Body() dto: CreateModeratorDto,
+  ) {
+    return this.accountsService.createModerator(admin, dto);
   }
 
   @Patch('accounts/:id/suspend')

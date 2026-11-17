@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AirlinesModule } from '../airlines/airlines.module';
+import { HotelsModule } from '../hotels/hotels.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { AdminAccountsController } from './admin-accounts.controller';
@@ -14,6 +16,8 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
   imports: [
     UsersModule,
     NotificationsModule,
+    HotelsModule,
+    AirlinesModule,
     MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
   ],
   controllers: [AdminAccountsController, AuditLogsController],

@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { BookingType, PaymentStatus } from '../enums/payment.enums';
+import { platformCurrency } from '../payments.constants';
 
 export type PaymentDocument = HydratedDocument<Payment>;
 
@@ -30,8 +31,14 @@ export class Payment {
   @Prop({ type: Number, required: true, min: 0 })
   amount!: number;
 
-  /** PAY-04: always the single platform currency. */
-  @Prop({ type: String, required: true, uppercase: true, minlength: 3, maxlength: 3 })
+  /** PAY-04: the platform currency (PLATFORM_CURRENCY in .env), stored uppercase. */
+  @Prop({
+    type: String,
+    required: true,
+    uppercase: true,
+    match: /^[A-Z]{3}$/,
+    default: () => platformCurrency(),
+  })
   currency!: string;
 
   @Prop({
