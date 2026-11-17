@@ -884,3 +884,37 @@ The controller is public and read-only, so guests can list airports before searc
 I reviewed the code and tested in Swagger without logging in:
 GET /api/airports (200), ?countryCode=EG, ?q=dubai, ?page=2, and 400 for ?page=0 and ?countryCode=EGY.
 ================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-17, GEN-06
+Category: Code generation
+Prompt:
+For FLT-17, could you tell me how to write the flight details response DTO and a pure function that
+builds the details page data (local airport times, every cabin with price,
+seats remaining and free baggage, extra baggage rules and the airline
+cancellation policy), with unit tests?
+How the output was used:
+The details rules are in one function that is unit tested, 
+so they can be checked without a database. Cabins are listed from Economy to First, 
+seats remaining are total minus booked minus held (never negative), 
+and the cancellation tiers are shown earliest first. 
+I reviewed the code and tested using Swagger.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-17
+Category: Code generation
+Prompt:
+I want to wire up FLT-17: a getDetails method in my search service that uses the details
+builder, and a public GET :id route in my controller with Swagger decorators.
+Could you also explain why the route has to be declared after search?
+How the output was used:
+GET /api/flights/:id is public and returns the flight, its cabins, 
+baggage and cancellation policy. A malformed id returns 400 and an unknown id returns 404. 
+The route is declared after /flights/search so that search is not read as an id. 
+I reviewed the code and tested in Swagger.
+================================================

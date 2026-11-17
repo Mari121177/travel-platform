@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Airline, AirlineDocument } from '../../airlines/airline.schema';
@@ -14,6 +14,8 @@ import type {
   SearchFlightsResponseDto,
 } from './dto/flight-search-response.dto';
 import type { SearchFlightsQueryDto } from './dto/search-flights-query.dto';
+import type { FlightDetailsDto } from './dto/flight-details.dto';
+import { buildFlightDetails } from './search.details';
 import { buildLegPage } from './search.core';
 import type { AirportInfo, SearchableFlight } from './search.types';
 import { isPastLocalDate, validateSearchCriteria } from './search.utils';
@@ -78,7 +80,55 @@ export class FlightSearchService {
     );
     return { tripType: 'round-trip', outbound, return: returnLeg };
   }
+    // FLT-17: details of one flight (public)
+  async getDetails(id: string): Promise<FlightDetailsDto> {
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      throw new BadRequestException('Invalid flight id');
+    }
+    const flight = await this.flightModel.findById(id).lean().exec();
+    if (!flight) throw new NotFoundException('Flight not found');
 
+    const [airline, cabins, airports] = await Promise.all([
+      this.airlineModel.findById(flight.airline).lean().exec(),
+      this.cabinModel.find({ flight: flight._id }).lean().exec(),
+      this.loadAirports([flight.departureAirport, flight.arrivalAirport]),
+    ]);
+    const origin = airports.get(flight.departureAirport);
+    const destination = airports.get(flight.arrivalAirport);
+    if (!airline || !origin || !destination) {
+      throw new NotFoundException('Flight not found');
+    }
+
+    return buildFlightDetails({
+      flight: {
+        id: String(flight._id),
+        flightNumber: flight.flightNumber,
+        status: flight.status,
+        departureTime: flight.departureTime,
+        arrivalTime: flight.arrivalTime,
+      },
+      airline: {
+        id: String(airline._id),
+        name: airline.name,
+        code: airline.code,
+        extraBagPrice: airline.extraBagPrice,
+        maxExtraBags: airline.maxExtraBags,
+        cancellationTiers: airline.cancellationTiers ?? [],
+      },
+      cabins: cabins.map((c) => ({
+        cabin: c.cabinClass,
+        price: c.price,
+        totalSeats: c.totalSeats,
+        bookedSeats: c.bookedSeats,
+        heldSeats: c.heldSeats,
+        freeBags: c.freeBags,
+        maxBagWeightKg: c.maxBagWeightKg,
+      })),
+      origin,
+      destination,
+    });
+  }
+  
   private async searchLeg(
     from: string,
     to: string,
