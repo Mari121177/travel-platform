@@ -12,6 +12,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
 import { Airline, AirlineDocument } from '../airlines/airline.schema';
+import { daysUntil, refundPercentFor } from '../airlines/policy.util';
 import { Cabin, CabinDocument } from '../flights/cabin.schema';
 import { CabinClass, FlightStatus } from '../flights/enums/flight.enums';
 import { Flight, FlightDocument } from '../flights/flight.schema';
@@ -444,6 +445,114 @@ export class FlightBookingsService
     return { cancelled, expired };
   }
 
+  // ---------- FLT-26: user cancellation with refund preview ----------
+
+  private async computeRefund(doc: FlightBookingDocument) {
+    if (doc.status !== FlightBookingStatus.Confirmed) {
+      throw new ConflictException('Only Confirmed bookings can be cancelled');
+    }
+    if (!doc.departureTime || doc.departureTime <= new Date()) {
+      throw new ConflictException(
+        'Cancellation after departure is not allowed',
+      );
+    }
+    const airline = doc.airlineId
+      ? await this.airlineModel.findById(doc.airlineId)
+      : null;
+    const tiers = (airline?.cancellationTiers ?? []).map((t) => ({
+      daysBeforeDeparture: t.daysBeforeDeparture,
+      refundPercent: t.refundPercent,
+    }));
+    const refundPercent = refundPercentFor(tiers, daysUntil(doc.departureTime));
+    const refundAmount =
+      Math.round(((doc.totalPrice * refundPercent) / 100) * 100) / 100;
+    return { refundPercent, refundAmount };
+  }
+
+  /** Step 1 of FLT-26: the user sees the refund before confirming. */
+  async cancelPreview(userId: string, bookingId: string) {
+    const doc = await this.findOwned(userId, bookingId);
+    const { refundPercent, refundAmount } = await this.computeRefund(doc);
+    return {
+      bookingId: String(doc._id),
+      reference: doc.reference ?? null,
+      totalPrice: doc.totalPrice,
+      refundPercent,
+      refundAmount,
+    };
+  }
+
+  /** Step 2 of FLT-26: cancel, release seats, refund (only if > 0), notify. */
+  async cancelMine(userId: string, bookingId: string) {
+    const existing = await this.findOwned(userId, bookingId);
+    const { refundPercent, refundAmount } = await this.computeRefund(existing);
+
+    // Atomic: only one request can flip Confirmed -> Cancelled.
+    const doc = await this.bookingModel.findOneAndUpdate(
+      { _id: existing._id, status: FlightBookingStatus.Confirmed },
+      {
+        $set: {
+          status: FlightBookingStatus.Cancelled,
+          cancelledAt: new Date(),
+          refundPercent,
+          refundAmount,
+        },
+      },
+      { new: true },
+    );
+    if (!doc) throw new ConflictException('Booking is no longer Confirmed');
+
+    await this.safely(
+      () =>
+        this.releaseBooked(
+          this.legsOf(doc),
+          doc.cabinClass,
+          doc.passengers.length,
+        ),
+      `release booked seats of ${String(doc._id)}`,
+    );
+
+    // Refund only AFTER the status is saved; a payments failure never undoes the cancel.
+    if (refundAmount > 0 && this.payments) {
+      try {
+        const r = await this.payments.refund(
+          'flight',
+          String(doc._id),
+          refundAmount,
+          'UserCancellation',
+        );
+        doc.refundId = typeof r === 'string' ? r : r.id;
+        await doc.save();
+      } catch (e) {
+        this.logger.error(`refund failed for ${String(doc._id)}`, e);
+      }
+    }
+
+    await this.notifications.send(
+      doc.userId,
+      NotificationType.BOOKING_CANCELLED,
+      `Your flight booking ${doc.reference} was cancelled. Refund: ${refundAmount} (${refundPercent}%).`,
+      { bookingType: 'flight', bookingId: String(doc._id) },
+    );
+
+    return this.toUserView(doc, new Date());
+  }
+
+  private async findOwned(
+    userId: string,
+    bookingId: string,
+  ): Promise<FlightBookingDocument> {
+    if (!Types.ObjectId.isValid(bookingId)) {
+      throw new NotFoundException('Booking not found');
+    }
+    const doc = await this.bookingModel.findOne({
+      _id: new Types.ObjectId(bookingId),
+      userId: new Types.ObjectId(userId),
+    });
+    if (!doc) throw new NotFoundException('Booking not found');
+    return doc;
+  }
+
   // ---------- FLT-25: the logged-in user's own bookings ----------
 
   async listMine(userId: string, group?: BookingGroup, page = 1) {
@@ -481,14 +590,7 @@ export class FlightBookingsService
 
   /** Owner only. 404 (not 403) for other users' bookings, so they are not revealed. */
   async getMine(userId: string, bookingId: string) {
-    if (!Types.ObjectId.isValid(bookingId)) {
-      throw new NotFoundException('Booking not found');
-    }
-    const doc = await this.bookingModel.findOne({
-      _id: new Types.ObjectId(bookingId),
-      userId: new Types.ObjectId(userId),
-    });
-    if (!doc) throw new NotFoundException('Booking not found');
+    const doc = await this.findOwned(userId, bookingId);
     return this.toUserView(doc, new Date());
   }
 

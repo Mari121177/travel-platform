@@ -44,6 +44,23 @@ export class FlightBookingsController {
     return this.service.listMine(userId, query.group, query.page ?? 1);
   }
 
+  @Get(':id/cancel-preview')
+  @ApiOperation({
+    summary: 'Refund amount if I cancel this booking now (FLT-26, step 1)',
+  })
+  cancelPreview(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.service.cancelPreview(userId, id);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({
+    summary:
+      'Cancel my Confirmed booking before departure; seats return, refund is issued (FLT-26, step 2)',
+  })
+  cancel(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.service.cancelMine(userId, id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Full details of one of my bookings (FLT-25)' })
   getMine(@CurrentUser('id') userId: string, @Param('id') id: string) {
