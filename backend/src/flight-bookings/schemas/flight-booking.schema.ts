@@ -111,6 +111,10 @@ export class FlightBooking {
 
   @Prop({ type: String, default: null })
   refundId: string | null;
+
+  // Added automatically by `timestamps: true`; declared so TypeScript knows them.
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type FlightBookingDocument = HydratedDocument<FlightBooking>;
