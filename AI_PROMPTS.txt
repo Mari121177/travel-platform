@@ -918,3 +918,14 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-30
+Prompt:
+Asked Claude for a background job that marks flights Departed after their departure time.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
