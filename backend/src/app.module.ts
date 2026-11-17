@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AdminModule } from './admin/admin.module';
 import { AirlinesModule } from './airlines/airlines.module';
+import { AirportsModule } from './airports/airports.module';
 import { FlightsModule } from './flights/flights.module';
 import { FlightSearchModule } from './flights/search/flight-search.module';
 import { FlightBookingsModule } from './flight-bookings/flight-bookings.module';
@@ -32,6 +33,7 @@ import { ReferenceDataModule } from './reference-data/reference-data.module';
     UsersModule,
     AdminModule,
     AirlinesModule,
+    AirportsModule,
     FlightsModule,
     FlightSearchModule,
     FlightBookingsModule,

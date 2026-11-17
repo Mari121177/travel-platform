@@ -852,3 +852,35 @@ Review a teammate's hotel booking pull request from its diff file against the re
 How the output was used:
 Claude listed what must be fixed before it can be merged: empty HotelsService and HotelsController stubs that would stop develop from compiling, user ids read from an x-user-id header, no role or ownership check on the hotel reservations route (HTL-22), and a missing @Public() on the hotel reviews route (HTL-24). It is not merged.
 ================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02, GEN-05
+Category: Code generation
+Prompt:
+Write the query DTO and service for a public, read-only airports list (FLT-02):
+filters q (name or IATA code), countryCode and cityId, a page parameter, fixed
+page size 10 with no limit parameter, rejecting unknown and repeated params,
+reusing the existing Airport model from reference-data, plus a getByCodes
+method that flight search can use.
+How the output was used:
+The controller is public so guests can search. 
+The service reads the existing Airport model from reference-data 
+(no new schema or seeder) and has a fixed page size of 10. 
+Unknown and repeated query parameters are rejected (400). I reviewed the code and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02
+Category: Code generation
+Prompt:
+Could you help me write the public GET /api/airports controller (FLT-02) with Swagger
+decorators?
+How the output was used:
+The controller is public and read-only, so guests can list airports before searching.
+I reviewed the code and tested in Swagger without logging in:
+GET /api/airports (200), ?countryCode=EG, ?q=dubai, ?page=2, and 400 for ?page=0 and ?countryCode=EGY.
+================================================
