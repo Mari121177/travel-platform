@@ -4,6 +4,7 @@ import { AirlinesModule } from '../airlines/airlines.module';
 import { Cabin, CabinSchema } from './cabin.schema';
 import { Flight, FlightSchema } from './flight.schema';
 import { FlightsController } from './flights.controller';
+import { FlightStatusScheduler } from './flight-status.scheduler';
 import { FlightsService } from './flights.service';
 
 @Module({
@@ -15,7 +16,7 @@ import { FlightsService } from './flights.service';
     AirlinesModule,
   ],
   controllers: [FlightsController],
-  providers: [FlightsService],
+  providers: [FlightsService, FlightStatusScheduler],
   exports: [FlightsService, MongooseModule],
 })
 export class FlightsModule {}
