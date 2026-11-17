@@ -11,9 +11,16 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
+import { Airline, AirlineDocument } from '../airlines/airline.schema';
+import { Cabin, CabinDocument } from '../flights/cabin.schema';
+import { CabinClass, FlightStatus } from '../flights/enums/flight.enums';
+import { Flight, FlightDocument } from '../flights/flight.schema';
+import { NotificationType } from '../notifications/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CreateFlightBookingDto } from './dto/create-flight-booking.dto';
 import { BookingGroup } from './dto/list-flight-bookings.dto';
 import { FlightBookingStatus } from './enums/flight-booking-status.enum';
-import { PAGE_SIZE } from './flight-booking.constants';
+import { HOLD_MINUTES, PAGE_SIZE } from './flight-booking.constants';
 import {
   AdminFlightBookingFilter,
   AdminFlightBookingItem,
@@ -24,13 +31,14 @@ import type {
   FlightBookingPort,
   PayableFlightBooking,
 } from './ports/flight-booking.port';
-import { PAYMENTS_PORT } from './ports/payments.port';
 import type { PaymentsPort } from './ports/payments.port';
+import { PAYMENTS_PORT } from './ports/payments.port';
 import {
   FlightBooking,
   FlightBookingDocument,
 } from './schemas/flight-booking.schema';
 import { generateBookingReference } from './utils/booking-reference.util';
+import { calculateBaggageFee, calculateTotal } from './utils/pricing.util';
 
 @Injectable()
 export class FlightBookingsService
@@ -42,6 +50,13 @@ export class FlightBookingsService
   constructor(
     @InjectModel(FlightBooking.name)
     private readonly bookingModel: Model<FlightBookingDocument>,
+    @InjectModel(Cabin.name)
+    private readonly cabinModel: Model<CabinDocument>,
+    @InjectModel(Flight.name)
+    private readonly flightModel: Model<FlightDocument>,
+    @InjectModel(Airline.name)
+    private readonly airlineModel: Model<AirlineDocument>,
+    private readonly notifications: NotificationsService,
     @Optional()
     @Inject(PAYMENTS_PORT)
     private readonly payments?: PaymentsPort,
@@ -77,7 +92,7 @@ export class FlightBookingsService
 
   /**
    * Atomic PendingPayment -> Expired. Only the call that wins continues,
-   * so seats can never be released twice.
+   * so seats can never be released twice. No notification (GEN-01).
    */
   private async expireOne(
     bookingId: string,
@@ -96,7 +111,15 @@ export class FlightBookingsService
     );
     if (!expired) return false;
 
-    // TODO (needs Member 2's cabin schema): give the held seats back to inventory.
+    await this.safely(
+      () =>
+        this.releaseHeld(
+          this.legsOf(expired),
+          expired.cabinClass,
+          expired.passengers.length,
+        ),
+      `release held seats of ${bookingId}`,
+    );
 
     if (this.payments) {
       try {
@@ -108,11 +131,106 @@ export class FlightBookingsService
     return true;
   }
 
+  // ---------- FLT-19 / FLT-21: summary before payment (no seats reserved) ----------
+
+  async summary(dto: CreateFlightBookingDto) {
+    const p = await this.prepare(dto);
+    return {
+      flightNumber: p.outbound.flightNumber,
+      airlineName: p.airline.name,
+      origin: p.outbound.departureAirport,
+      destination: p.outbound.arrivalAirport,
+      departureTime: p.outbound.departureTime,
+      arrivalTime: p.lastArrival,
+      roundTrip: !!p.inbound,
+      returnFlightNumber: p.inbound?.flightNumber ?? null,
+      cabinClass: dto.cabinClass,
+      passengers: dto.passengers.map((x) => ({
+        fullName: x.fullName,
+        type: x.type ?? 'adult',
+        extraBags: x.extraBags?.length ?? 0,
+      })),
+      farePerPassenger: p.farePerPassenger,
+      baseFare: p.baseFare,
+      baggageFee: p.baggageFee,
+      totalPrice: p.totalPrice,
+      holdMinutesOnPayment: HOLD_MINUTES,
+    };
+  }
+
+  // ---------- FLT-22: atomic seat hold + PendingPayment booking ----------
+
+  async hold(userId: string, dto: CreateFlightBookingDto) {
+    const p = await this.prepare(dto);
+    const n = dto.passengers.length;
+
+    // Atomic: seats are reserved only if enough remain, so concurrent
+    // requests can never book more seats than available.
+    const legs: Types.ObjectId[] = [p.outbound._id];
+    if (p.inbound) legs.push(p.inbound._id);
+
+    const reserved: Types.ObjectId[] = [];
+    for (const leg of legs) {
+      const ok = await this.holdSeats(leg, dto.cabinClass, n);
+      if (!ok) {
+        await this.safely(
+          () => this.releaseHeld(reserved, dto.cabinClass, n),
+          'roll back partial hold',
+        );
+        throw new ConflictException('Not enough seats available');
+      }
+      reserved.push(leg);
+    }
+
+    try {
+      const booking = await this.bookingModel.create({
+        userId: new Types.ObjectId(userId),
+        flightId: p.outbound._id,
+        returnFlightId: p.inbound?._id ?? null,
+        airlineId: p.airline._id,
+        flightNumber: p.outbound.flightNumber,
+        airlineName: p.airline.name,
+        origin: p.outbound.departureAirport,
+        destination: p.outbound.arrivalAirport,
+        departureTime: p.outbound.departureTime,
+        arrivalTime: p.lastArrival,
+        cabinClass: dto.cabinClass,
+        passengers: dto.passengers.map((x) => ({
+          fullName: x.fullName,
+          dateOfBirth: x.dateOfBirth,
+          passportNumber: x.passportNumber,
+          type: x.type ?? 'adult',
+          extraBags: x.extraBags ?? [],
+        })),
+        baseFare: p.baseFare,
+        baggageFee: p.baggageFee,
+        totalPrice: p.totalPrice,
+        status: FlightBookingStatus.PendingPayment,
+        holdExpiresAt: new Date(Date.now() + HOLD_MINUTES * 60_000),
+      });
+      return this.toUserView(booking, new Date());
+    } catch (e) {
+      await this.safely(
+        () => this.releaseHeld(reserved, dto.cabinClass, n),
+        'release seats after failed booking insert',
+      );
+      throw e;
+    }
+  }
+
   // ---------- Payments contract (FLIGHT_BOOKING_PORT) ----------
 
   /** 404 if not found. No ownership check: payments compares userId itself. */
   async getPayableBooking(bookingId: string): Promise<PayableFlightBooking> {
     const doc = await this.findByIdOr404(bookingId);
+    const airline = doc.airlineId
+      ? await this.airlineModel.findById(doc.airlineId)
+      : null;
+    const cabin = await this.cabinModel.findOne({
+      flight: doc.flightId,
+      cabinClass: doc.cabinClass as CabinClass,
+    });
+
     return {
       bookingId: String(doc._id),
       type: 'flight',
@@ -121,9 +239,19 @@ export class FlightBookingsService
       status: doc.status,
       totalPrice: doc.totalPrice,
       holdExpiresAt: doc.holdExpiresAt,
-      // TODO (Member 2's airline schema): real active flag and policies
-      airlineActive: true,
-      policies: { cancellationTiers: [], baggagePolicy: null },
+      airlineActive: airline ? airline.isActive : true,
+      policies: {
+        cancellationTiers: (airline?.cancellationTiers ?? []).map((t) => ({
+          daysBeforeDeparture: t.daysBeforeDeparture,
+          refundPercent: t.refundPercent,
+        })),
+        baggagePolicy: {
+          extraBagPrice: airline?.extraBagPrice ?? null,
+          maxExtraBagsPerPassenger: airline?.maxExtraBags ?? 0,
+          freeBags: cabin?.freeBags ?? null,
+          maxBagWeightKg: cabin?.maxBagWeightKg ?? null,
+        },
+      },
       policiesAcceptedAt: doc.policiesAcceptedAt,
     };
   }
@@ -152,7 +280,7 @@ export class FlightBookingsService
   async confirmBooking(bookingId: string, paymentId?: string) {
     const existing = await this.findByIdOr404(bookingId);
     if (existing.status === FlightBookingStatus.Confirmed) {
-      return this.toUserView(existing, new Date()); // webhook retry: no error
+      return this.toUserView(existing, new Date()); // webhook retry: no error, no 2nd notification
     }
     this.assertPayable(existing);
 
@@ -195,8 +323,24 @@ export class FlightBookingsService
       throw new ConflictException(`Cannot confirm a ${fresh.status} booking`);
     }
 
-    // TODO (Member 2's cabin schema): turn held seats into booked seats.
-    // TODO (notifications): send BOOKING_CONFIRMED to the user.
+    // Held seats become booked seats (only the call that won the flip gets here).
+    await this.safely(
+      () =>
+        this.convertHeldToBooked(
+          this.legsOf(confirmed!),
+          confirmed!.cabinClass,
+          confirmed!.passengers.length,
+        ),
+      `convert held seats of ${bookingId}`,
+    );
+
+    // GEN-01: in-app notification (never throws)
+    await this.notifications.send(
+      confirmed.userId,
+      NotificationType.BOOKING_CONFIRMED,
+      `Your flight booking ${confirmed.reference} (${confirmed.origin} to ${confirmed.destination}) is confirmed.`,
+      { bookingType: 'flight', bookingId: String(confirmed._id) },
+    );
 
     return this.toUserView(confirmed, new Date());
   }
@@ -216,7 +360,8 @@ export class FlightBookingsService
 
   /**
    * FLT-06: the airline cancelled the flight. Cancels all Confirmed bookings
-   * (100% refund, 'ProviderCancellation') and expires the pending holds.
+   * (100% refund, 'ProviderCancellation'), expires the pending holds and
+   * sends the in-app notifications. Returns counts.
    */
   async cancelAllForFlight(
     flightId: string,
@@ -247,13 +392,27 @@ export class FlightBookingsService
     for (const { _id } of confirmed) {
       const doc = await this.bookingModel.findOneAndUpdate(
         { _id, status: FlightBookingStatus.Confirmed },
-        { $set: { status: FlightBookingStatus.Cancelled, cancelledAt: new Date(), refundPercent: 100 } },
+        {
+          $set: {
+            status: FlightBookingStatus.Cancelled,
+            cancelledAt: new Date(),
+            refundPercent: 100,
+          },
+        },
         { new: true },
       );
       if (!doc) continue;
       cancelled++;
 
-      // TODO (Member 2's cabin schema): return the booked seats to inventory.
+      await this.safely(
+        () =>
+          this.releaseBooked(
+            this.legsOf(doc),
+            doc.cabinClass,
+            doc.passengers.length,
+          ),
+        `release booked seats of ${String(doc._id)}`,
+      );
 
       doc.refundAmount = doc.totalPrice;
       await doc.save();
@@ -273,7 +432,13 @@ export class FlightBookingsService
           this.logger.error(`refund failed for ${String(doc._id)}`, e);
         }
       }
-      // TODO (notifications): send BOOKING_CANCELLED to doc.userId.
+
+      await this.notifications.send(
+        doc.userId,
+        NotificationType.FLIGHT_CANCELLED,
+        `Your flight booking ${doc.reference} was cancelled by the airline. A full refund has been issued.`,
+        { bookingType: 'flight', bookingId: String(doc._id) },
+      );
     }
 
     return { cancelled, expired };
@@ -338,8 +503,6 @@ export class FlightBookingsService
       .exists({
         userId: new Types.ObjectId(userId),
         status: FlightBookingStatus.Confirmed,
-        // arrivalTime is null until the flight data is copied onto the booking,
-        // so a missing value is treated as "not finished yet" (safe side).
         $or: [{ arrivalTime: { $gte: new Date() } }, { arrivalTime: null }],
       })
       .session(session ?? null);
@@ -359,13 +522,11 @@ export class FlightBookingsService
     const now = new Date();
     const query: Record<string, unknown> = {};
 
-    // createdAt range, both ends inclusive
     const createdAt: Record<string, Date> = {};
     if (filter.from) createdAt.$gte = this.parseDate(filter.from, false);
     if (filter.to) createdAt.$lte = this.parseDate(filter.to, true);
     if (Object.keys(createdAt).length) query.createdAt = createdAt;
 
-    // "Completed" is derived: Confirmed + arrival time in the past
     if (filter.status === 'Completed') {
       query.status = FlightBookingStatus.Confirmed;
       query.arrivalTime = { $lt: now };
@@ -393,9 +554,206 @@ export class FlightBookingsService
     };
   }
 
+  // ---------- seat inventory helpers (atomic updates on the cabins collection) ----------
+
+  /** Reserve n seats only if enough remain. One atomic update, so no overselling. */
+  private async holdSeats(
+    flightId: Types.ObjectId,
+    cabinClass: string,
+    n: number,
+  ): Promise<boolean> {
+    const res = await this.cabinModel.updateOne(
+      {
+        flight: flightId,
+        cabinClass: cabinClass as CabinClass,
+        $expr: {
+          $gte: [
+            {
+              $subtract: [
+                '$totalSeats',
+                { $add: ['$bookedSeats', '$heldSeats'] },
+              ],
+            },
+            n,
+          ],
+        },
+      },
+      { $inc: { heldSeats: n } },
+    );
+    return res.modifiedCount === 1;
+  }
+
+  private async releaseHeld(
+    legs: Types.ObjectId[],
+    cabinClass: string,
+    n: number,
+  ): Promise<void> {
+    for (const leg of legs) {
+      await this.cabinModel.updateOne(
+        {
+          flight: leg,
+          cabinClass: cabinClass as CabinClass,
+          heldSeats: { $gte: n },
+        },
+        { $inc: { heldSeats: -n } },
+      );
+    }
+  }
+
+  private async convertHeldToBooked(
+    legs: Types.ObjectId[],
+    cabinClass: string,
+    n: number,
+  ): Promise<void> {
+    for (const leg of legs) {
+      await this.cabinModel.updateOne(
+        {
+          flight: leg,
+          cabinClass: cabinClass as CabinClass,
+          heldSeats: { $gte: n },
+        },
+        { $inc: { heldSeats: -n, bookedSeats: n } },
+      );
+    }
+  }
+
+  private async releaseBooked(
+    legs: Types.ObjectId[],
+    cabinClass: string,
+    n: number,
+  ): Promise<void> {
+    for (const leg of legs) {
+      await this.cabinModel.updateOne(
+        {
+          flight: leg,
+          cabinClass: cabinClass as CabinClass,
+          bookedSeats: { $gte: n },
+        },
+        { $inc: { bookedSeats: -n } },
+      );
+    }
+  }
+
+  private legsOf(doc: FlightBookingDocument): Types.ObjectId[] {
+    return doc.returnFlightId
+      ? [doc.flightId, doc.returnFlightId]
+      : [doc.flightId];
+  }
+
+  private async safely(fn: () => Promise<unknown>, what: string) {
+    try {
+      await fn();
+    } catch (e) {
+      this.logger.error(`Failed to ${what}`, e);
+    }
+  }
+
+  // ---------- validation and pricing ----------
+
+  private async loadLeg(flightId: string, cabinClass: string) {
+    if (!Types.ObjectId.isValid(flightId)) {
+      throw new NotFoundException('Flight not found');
+    }
+    const flight = await this.flightModel.findById(flightId);
+    if (!flight) throw new NotFoundException('Flight not found');
+    if (
+      flight.status !== FlightStatus.SCHEDULED ||
+      flight.departureTime <= new Date()
+    ) {
+      throw new ConflictException('This flight is not available for booking');
+    }
+    const cabin = await this.cabinModel.findOne({
+      flight: flight._id,
+      cabinClass: cabinClass as CabinClass,
+    });
+    if (!cabin) {
+      throw new NotFoundException(`No ${cabinClass} cabin on this flight`);
+    }
+    return { flight, cabin };
+  }
+
+  /** Loads and validates flights, airline and baggage, and computes the total (FLT-19, FLT-21). */
+  private async prepare(dto: CreateFlightBookingDto) {
+    const out = await this.loadLeg(dto.flightId, dto.cabinClass);
+    const ret = dto.returnFlightId
+      ? await this.loadLeg(dto.returnFlightId, dto.cabinClass)
+      : null;
+
+    const airline = await this.airlineModel.findById(out.flight.airline);
+    if (!airline) throw new NotFoundException('Airline not found');
+    if (!airline.isActive) {
+      throw new ConflictException('This airline is not available for booking');
+    }
+    if (ret) {
+      if (String(ret.flight.airline) !== String(out.flight.airline)) {
+        throw new BadRequestException(
+          'Outbound and return flights must be on the same airline',
+        );
+      }
+      if (ret.flight.departureTime <= out.flight.arrivalTime) {
+        throw new BadRequestException(
+          'The return flight must depart after the outbound flight arrives',
+        );
+      }
+    }
+
+    // FLT-08: extra bags per passenger and weight per bag are limited
+    const maxBags = airline.maxExtraBags ?? 0;
+    const bagCounts = dto.passengers.map((p) => p.extraBags?.length ?? 0);
+    const totalBags = bagCounts.reduce((a, b) => a + b, 0);
+    dto.passengers.forEach((p, i) => {
+      if (bagCounts[i] > maxBags) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} exceeds the maximum of ${maxBags} extra bag(s)`,
+        );
+      }
+      for (const bag of p.extraBags ?? []) {
+        if (bag.weightKg > out.cabin.maxBagWeightKg) {
+          throw new BadRequestException(
+            `An extra bag exceeds the maximum weight of ${out.cabin.maxBagWeightKg} kg`,
+          );
+        }
+      }
+    });
+    if (totalBags > 0 && airline.extraBagPrice == null) {
+      throw new BadRequestException(
+        'This airline has no extra baggage price defined',
+      );
+    }
+
+    const legCount = ret ? 2 : 1;
+    const baggageFee =
+      calculateBaggageFee(
+        bagCounts,
+        airline.extraBagPrice != null
+          ? {
+              pricePerExtraBag: airline.extraBagPrice,
+              maxExtraBagsPerPassenger: maxBags,
+            }
+          : null,
+      ) * legCount;
+
+    const farePerPassenger = out.cabin.price + (ret?.cabin.price ?? 0);
+    const n = dto.passengers.length;
+    const totalPrice = calculateTotal(farePerPassenger, n, baggageFee);
+
+    return {
+      outbound: out.flight,
+      inbound: ret?.flight ?? null,
+      airline,
+      lastArrival: ret ? ret.flight.arrivalTime : out.flight.arrivalTime,
+      farePerPassenger,
+      baseFare: Math.round(farePerPassenger * n * 100) / 100,
+      baggageFee,
+      totalPrice,
+    };
+  }
+
   // ---------- helpers ----------
 
-  private async findByIdOr404(bookingId: string): Promise<FlightBookingDocument> {
+  private async findByIdOr404(
+    bookingId: string,
+  ): Promise<FlightBookingDocument> {
     if (!Types.ObjectId.isValid(bookingId)) {
       throw new NotFoundException('Booking not found');
     }
@@ -485,7 +843,6 @@ export class FlightBookingsService
       airlineName: doc.airlineName ?? '',
       origin: doc.origin ?? '',
       destination: doc.destination ?? '',
-      // TODO: these times are filled once the flight data is copied at hold time
       departureTime: doc.departureTime ?? createdAt,
       arrivalTime: doc.arrivalTime ?? createdAt,
       totalPrice: doc.totalPrice,

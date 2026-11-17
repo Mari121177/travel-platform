@@ -13,11 +13,13 @@ export interface PayableFlightBooking {
   holdExpiresAt: Date | null;
   airlineActive: boolean;
   policies: {
-    cancellationTiers: { daysBefore: number; refundPercent: number }[];
+    cancellationTiers: { daysBeforeDeparture: number; refundPercent: number }[];
     baggagePolicy: {
-      pricePerExtraBag: number;
+      extraBagPrice: number | null;
       maxExtraBagsPerPassenger: number;
-    } | null;
+      freeBags: number | null;
+      maxBagWeightKg: number | null;
+    };
   };
   policiesAcceptedAt: Date | null;
 }
