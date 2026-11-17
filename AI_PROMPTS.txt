@@ -918,3 +918,13 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: GEN-09, GEN-10, GEN-07
+Category: Code generation
+Prompt:
+Implement user content reporting and the admin moderation endpoints for reports and direct content hide/delete across posts, comments, reviews and itineraries.
+How the output was used:
+Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
+================================================
