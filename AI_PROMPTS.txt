@@ -538,6 +538,19 @@ How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
 
+================================================
+Date: 2026-11-17
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-25
+
+Prompt:
+How can an itinerary return hotels for each city group, reusing the existing HTL-11 hotel search? I pasted hotels.service.ts, hotels.controller.ts and the search DTO.
+
+How the output was used:
+Used the new files itinerary-hotels.service.ts, itinerary-hotels.controller.ts and itinerary-hotels-query.dto.ts, plus the module wiring, for GET /api/itineraries/:id/hotels. Each city group searches its city from the group's start date to the day after its last day. I reviewed the code, fixed a typo in itineraries.module.ts, and ran type checks. Tested in Swagger: 200 with one Cairo group and 2 hotels matching /api/hotels/search; 400 when rooms > guests; 400 when minPrice > maxPrice; 400 for an invalid itinerary id.
+================================================
+
 Date: 2026-11-16
 Student: Habiba
 Tool: Claude
