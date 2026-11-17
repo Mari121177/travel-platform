@@ -92,7 +92,14 @@ export class AirlinesService {
 
   /** For Mariam's admin deactivate/reactivate endpoints (ACC-15) */
   async setActive(airlineId: string, isActive: boolean) {
-    const airline = await this.model.findByIdAndUpdate(airlineId, { $set: { isActive } }, { new: true });
+    if (!isValidObjectId(airlineId)) {
+      throw new BadRequestException('Invalid airline id');
+    }
+    const airline = await this.model.findByIdAndUpdate(
+      airlineId,
+      { $set: { isActive } },
+      { new: true },
+    );
     if (!airline) throw new NotFoundException('Airline not found');
     return airline;
   }

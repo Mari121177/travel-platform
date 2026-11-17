@@ -918,3 +918,13 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01, GEN-07
+Category: Code generation
+Prompt:
+Implement the admin provider deactivation endpoints for hotel and airline providers, including hiding them from search, keeping existing confirmed bookings valid, notifying affected users and writing an audit log entry.
+How the output was used:
+Added PATCH /api/admin/providers/:type/:id/deactivate and reactivate, wired HotelsService.setHotelActive and AirlinesService.setActive, added provider-type parameter validation, notified provider moderators plus users with confirmed hotel bookings, recorded DEACTIVATE_PROVIDER/REACTIVATE_PROVIDER in the audit log, and returned the affected-user count. Build and lint pass. Airline passenger notifications remain pending because the flight-bookings module does not exist yet.
+================================================
