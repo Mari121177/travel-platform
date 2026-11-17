@@ -41,6 +41,18 @@ export class AirlinesService {
     return airline;
   }
 
+  // ACC-13: admin loads an airline (active OR deactivated) to create a moderator.
+  async findAirlineForAdmin(airlineId: string): Promise<AirlineDocument> {
+    if (!isValidObjectId(airlineId)) {
+      throw new BadRequestException('Invalid airline id');
+    }
+    const airline = await this.model.findById(airlineId);
+    if (!airline) {
+      throw new NotFoundException('Airline not found');
+    }
+    return airline;
+  }
+
   // FLT-01: moderator edits their own airline (name, code, logo)
   async update(id: string, dto: UpdateAirlineDto, user: AuthUser) {
     this.assertManages(await this.findOne(id), user);

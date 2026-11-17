@@ -57,17 +57,17 @@ export class AdminAccountsController {
   @Post('moderators')
   @ApiOperation({
     summary:
-      'Create a hotel moderator linked to one hotel, with a temporary password (ACC-13)',
+      'Create a hotel or airline moderator linked to one provider, with a temporary password (ACC-13)',
   })
   @ApiCreatedResponse({
     description: 'The moderator account. mustChangePassword is true',
   })
   @ApiBadRequestResponse({
     description:
-      'Invalid fields, weak temporary password, or airline moderators are not available yet',
+      'Invalid fields or weak temporary password',
   })
   @ApiConflictResponse({ description: 'Email is already registered' })
-  @ApiNotFoundResponse({ description: 'Hotel not found' })
+  @ApiNotFoundResponse({ description: 'Hotel or airline not found' })
   @ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
   @ApiForbiddenResponse({ description: 'Admins only' })
   createModerator(
