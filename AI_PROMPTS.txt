@@ -709,3 +709,133 @@ Extend the ACC-13 moderator creation endpoint so it supports both hotel and airl
 How the output was used:
 Added an admin-only airline lookup that includes deactivated airlines, reused the existing temporary-password and duplicate-email flow, set role airline_moderator and assignedProviderId to the airline id, generalized the audit entry providerType, and updated the Swagger descriptions. Build and lint pass; the hotel path remains unchanged.
 ================================================
+================================================
+Date: 2026-11-01
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Milestone 1 setup (README, project structure)
+Prompt:
+Guide me, as team leader, through the repository setup: the NestJS backend, the MongoDB Atlas connection with MONGODB_URI in .env, a global ValidationPipe, Swagger at /api/docs, a global exception filter, the 13 empty feature modules, the root README with the setup steps and Git workflow, and branch protection rules for develop and main.
+How the output was used:
+I followed the steps and committed them as the scaffold, database connection, core skeleton and README commits (95e86e1, 738c3f2, 8b0b726, 908f147). Claude's output was reviewed again later in the code review on 2026-11-07.
+================================================
+================================================
+Date: 2026-11-05
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-01, GEN-13
+Prompt:
+Implement user registration for the backend: a user schema, a register DTO that enforces the password rule (8+ characters, a letter and a digit), mandatory consent and a valid unique email, and a register endpoint that stores only a salted password hash.
+How the output was used:
+I used the generated user schema, register DTO and auth service as the base for the ACC-01 commit (a308b71), and checked the behavior in Swagger on 2026-11-07 (duplicate email, invalid email, weak password, missing consent, role injection).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-04, ACC-05, ACC-19
+Prompt:
+Review all my auth, users and common code against the requirement sheet and the project description. Say what to fix, add or remove, and do not assume anything about my files.
+How the output was used:
+Claude reviewed the login with lockout (5 failed attempts, 15 minutes) and the httpOnly access and refresh cookies that were written with Claude's help in the earlier conversation. I ran 11 tests in Swagger and Atlas (wrong password, unknown email, suspended account, lockout, cookies) and committed the login work (ad34974).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Core error handling (no requirement ID)
+Prompt:
+Same code review as above.
+How the output was used:
+Claude pointed out that the global exception filter returned "Internal server error" for unexpected errors without logging them. I replaced the file with a version that logs unexpected errors using the Nest Logger (commit 0018fc8).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Milestone 1 deliverable: README with setup instructions
+Prompt:
+Same code review as above.
+How the output was used:
+Claude noticed that the README did not mention JWT_SECRET, although the backend refuses to start without it. I replaced step 3 of the backend setup with the new text, including the command that generates a secret (commit 9332cb4).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Repository setup (no requirement ID)
+Prompt:
+Same code review as above.
+How the output was used:
+Claude found that .gitignore had two patterns joined on one line (.DS_Store*.tsbuildinfo). I replaced it with two separate lines (commit 8e35044).
+================================================
+================================================
+Date: 2026-11-08
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: GEN-12
+Prompt:
+Seed the reference data (countries, cities, airports, attractions) from the official CSV files. I provided screenshots of the four sheets and asked Claude to check everything against the project description and not to assume anything.
+How the output was used:
+Claude provided a CSV parser, four schemas, a seeder that upserts by key at startup, and a service that exposes the supported currencies. Claude compiled and ran it in a test project with my package versions before I used it. I ran it against Atlas (8 documents in each collection, no duplicates after a restart) and committed it (5ce1c5e). While checking Atlas I found that the airports collection had already been filled by another team member's script. That team member's pull request has not been merged; I requested changes in its review (see the airports review entry of 2026-11-10).
+================================================
+================================================
+Date: 2026-11-09
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-06, ACC-19, GEN-13
+Prompt:
+Build what my teammates asked me for: @Public(), @Roles() and @CurrentUser(), global guards (login required by default, 30 minutes of inactivity, suspended accounts, temporary password), GET /api/auth/me and POST /api/auth/logout that revokes the refresh token on the server.
+How the output was used:
+Claude wrote the decorators, the AuthUser type, the two global guards and the new endpoints, and tested them with a simulated user store (16 checks) before I used them. I fixed one mistake of mine (the controller code went into app.controller.ts first), then ran 10 tests in Swagger and Atlas (not logged in, session expiry, suspension, logout and revocation) and committed it (c6a33e2).
+================================================
+================================================
+Date: 2026-11-09
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: PAY-01, PAY-02, PAY-03, PAY-04
+Prompt:
+Review a teammate's pull request (payment, refund and policy acceptance schemas) from its diff file against the requirement sheet and the project rules. I asked Claude not to assume anything and to tell me which files it needed.
+How the output was used:
+Claude checked the schemas against PAY-01 to PAY-04 and the contract file for the booking modules. I merged pull request #6 (merge commit b88713b) and left a review comment with follow-up items for the author: one platform currency constant, Stripe amounts as integer cents, a unique index on refunds, and injection tokens for the booking contract.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-06, ACC-19
+Prompt:
+Build POST /api/auth/refresh for my NestJS auth module: verify the refresh token cookie, rotate it, enforce the 30 minute inactivity rule, reject suspended and deactivated accounts, and test it. After Claude used stand-in files in its first test, I told it not to assume anything about my files and to ask me for the real ones.
+How the output was used:
+Claude wrote the refresh method and route in auth.service.ts, auth.controller.ts and users.service.ts, then compiled them and ran 12 checks with my real files and an in-memory user store (rotation, reuse of the old token, two parallel requests, 30 minutes of inactivity, suspended and deactivated accounts, a temporary-password account, logout). I ran 8 tests in Swagger and Atlas and committed it (ab82ef8); it was merged as pull request #8.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: FLT-02
+Prompt:
+Review a teammate's airports pull request (FLT-02) from its diff file against the requirement sheet, my reference-data module and the project rules, and do not assume anything.
+How the output was used:
+Claude found a duplicate Airport schema and a seed script (the reference-data module already seeds the airports), a missing @Public() so guests got 401, unvalidated page and limit (a negative limit produced a negative skip), and unvalidated query parameters. I posted the review comment Claude wrote with a Request changes review on pull request #1. It is not merged yet.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: GEN-01, ACC-11, GEN-13
+Prompt:
+Review a teammate's in-app notifications pull request (GEN-01) from its diff file against the requirement sheet and the project rules.
+How the output was used:
+Claude found that every notification route read the user id from an x-user-id request header, so any logged-in user could read another user's notifications. I requested changes on pull request #2 using the review comment Claude wrote, which includes a corrected controller that uses @CurrentUser('id'). It is not merged yet.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: HTL-16, HTL-18, HTL-21, HTL-22, HTL-23, HTL-24
+Prompt:
+Review a teammate's hotel booking pull request from its diff file against the requirement sheet and the project rules.
+How the output was used:
+Claude listed what must be fixed before it can be merged: empty HotelsService and HotelsController stubs that would stop develop from compiling, user ids read from an x-user-id header, no role or ownership check on the hotel reservations route (HTL-22), and a missing @Public() on the hotel reviews route (HTL-24). It is not merged.
+================================================
