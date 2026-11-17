@@ -580,6 +580,136 @@ How the output was used:
 Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
 ================================================
 ================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-17
+Category: Requirements analysis
+Prompt:
+I'm member 3 (flight search, filters, sorting, airports). I only want you
+to read the zip file and the project description. [Later: link to the
+requirements Excel sheet, "I didn't find FLT-13, 14, 16 or 18".]
+How the output was used:
+Claude summarized my module's scope and the rules in the requirements sheet
+(passenger types, infant fare, price filter, sorting, local airport time).
+I checked it against the Excel sheet [and the project PDF]. Found that
+FLT-13, 14, 16 and 18 don't exist in the sheet.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02 (not mine), FLT-11
+Category: Process / debugging
+Prompt:
+Where do I begin? And how should I approach this project? [Pasted Mariam's review
+comments on Malk's FLT-02 PR.]
+How the output was used:
+Claude explained the branch and commit workflow. After the review on Malk's
+PR, I realised FLT-02 belongs to her and moved to
+feature/FLT-11-flight-search. I applied the review lessons (DTO validation,
+@Public) to my own DTO.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"Could you help me make the search query DTO and helper
+functions with their tests?"
+How the output was used:
+Claude generated search-flights-query.dto.ts, search.constants.ts,
+search.utils.ts and search.utils.spec.ts (local date to UTC range,
+passenger rules, price check, sorting). [I read through each function and
+can explain it.] [I ran tsc/lint/jest on my machine.]
+================================================
+================================================
+Date: 2026-11-13
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"I want to create placeholders while member 2 and member 4's work haven't
+been done yet"
+How the output was used:
+Claude generated search.placeholders.ts: a SearchableFlight interface that
+stands in for member 2's Flight schema, and a getHeldSeats() stub that
+returns 0 until member 4's holds exist. Both are temporary and will be
+replaced when their work is merged into develop. [I reviewed the file and
+the type-check passes on my machine: yes]
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, GEN-06
+Category: Code generation, Testing
+Prompt:
+Write the search rules (price, seats, sorting, paging),
+the search DTOs, local airport time helper and their unit tests, using Malk's flight,
+cabin and airline schemas.
+How the output was used:
+The search DTO rejects unknown and repeated parameters, 
+malformed airport codes and impossible dates, and the rules that compare fields are in a separate helper. 
+Local airport times use the built-in Intl time zone support, so no new package was added. 
+A temporary placeholder file stood in for the flight schema until it was merged. I reviewed the code and ran the unit tests.
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-15, GEN-05
+Category: Code generation
+Prompt:
+Apply the review comments on my pull request: 
+a fixed page size of 10 with no limit parameter, reject past departure dates, 
+and use the chosen cabin (or else the cheapest cabin with enough seats) for the price filter and sort.
+How the output was used:
+Removed the limit parameter and MAX_PAGE_SIZE, so ?limit= is now rejected (400). 
+The past-date check compares the departure date with today's date in the departure airport's time zone. 
+The price filter and sort use the per-person fare and each cabin shows the party total separately. 
+I reviewed the code and tested using Swagger.
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-30
+Category: Code generation, Testing
+Prompt:
+Replace my placeholders with the real flight, cabin and airline schemas, and write the search service and unit tests: only Scheduled flights, the local departure date from departureLocalDate, held and booked seats, deactivated airlines hidden, unknown airports and past dates rejected (400), and the return leg for round trips.
+How the output was used:
+The search rules are in one function without database access, covered by unit tests, and the database queries are in FlightSearchService. Malk's CabinClass enum is reused. Flights that already departed are not shown, which is an addition to the requirements. I fixed a missing-file import error in my own folder. I reviewed the code [and ran the unit tests: result].
+================================================
+================================================
+Date: 2026-11-16
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+Write the public GET /api/flights/search controller 
+and a search module that imports the flights and airlines modules, 
+without editing Malk's module.
+How the output was used:
+The controller is public so guests can search. 
+FlightSearchModule is registered with one line in app.module.ts. I reviewed the code and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-16
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-13, GEN-07, GEN-13
+Category: Code generation
+Prompt:
+Extend the ACC-13 moderator creation endpoint so it supports both hotel and airline providers now that the Airline schema is merged.
+How the output was used:
+Added an admin-only airline lookup that includes deactivated airlines, reused the existing temporary-password and duplicate-email flow, set role airline_moderator and assignedProviderId to the airline id, generalized the audit entry providerType, and updated the Swagger descriptions. Build and lint pass; the hotel path remains unchanged.
+================================================
+================================================
 Date: 2026-11-01
 Student: Mariam
 Tool: Claude (claude.ai)
