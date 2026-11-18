@@ -1,10 +1,20 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CreateFlightBookingDto } from './dto/create-flight-booking.dto';
 import { ListFlightBookingsQueryDto } from './dto/list-flight-bookings.dto';
+import { ETicketService } from './e-ticket.service';
 import { FlightBookingsService } from './flight-bookings.service';
 
 @ApiTags('Flight bookings')
@@ -12,7 +22,10 @@ import { FlightBookingsService } from './flight-bookings.service';
 @Roles(Role.User)
 @Controller('flight-bookings')
 export class FlightBookingsController {
-  constructor(private readonly service: FlightBookingsService) {}
+  constructor(
+    private readonly service: FlightBookingsService,
+    private readonly eTicket: ETicketService,
+  ) {}
 
   @Post('hold')
   @ApiOperation({
@@ -42,6 +55,18 @@ export class FlightBookingsController {
     @Query() query: ListFlightBookingsQueryDto,
   ) {
     return this.service.listMine(userId, query.group, query.page ?? 1);
+  }
+
+  @Get(':id/e-ticket')
+  @ApiOperation({
+    summary: 'Download my e-ticket as a PDF (Confirmed bookings only) (FLT-23)',
+  })
+  async eTicketPdf(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    await this.eTicket.stream(userId, id, res);
   }
 
   @Get(':id/cancel-preview')
