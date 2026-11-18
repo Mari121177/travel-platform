@@ -918,3 +918,13 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+================================================
+Date: 2026-11-18
+Student: Adala
+Tool: Claude
+Related Requirement: FLT-19, FLT-21, FLT-22, FLT-23, FLT-25, FLT-26, FLT-29
+Prompt:
+How do I build the flight booking module (schema, atomic seat hold, expiry timer, payment port, cancel with refund, e-ticket PDF, passenger CSV) following the hotel-bookings pattern and the payments contract?
+How the output was used:
+Used the explanations and code as a base for the schema, service, controllers and the FLIGHT_BOOKING_PORT, then reviewed it, fixed compile errors and tested it in Swagger.
+================================================
