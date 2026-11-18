@@ -1,5 +1,3 @@
-import type { ClientSession } from 'mongoose';
-
 export type AdminFlightBookingStatus =
   | 'PendingPayment'
   | 'Confirmed'

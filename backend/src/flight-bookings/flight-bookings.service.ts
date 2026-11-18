@@ -39,7 +39,9 @@ import {
   FlightBookingDocument,
 } from './schemas/flight-booking.schema';
 import { generateBookingReference } from './utils/booking-reference.util';
-import { calculateBaggageFee, calculateTotal } from './utils/pricing.util';
+import { calculateBaggageFee } from './utils/pricing.util';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 @Injectable()
 export class FlightBookingsService
@@ -117,7 +119,7 @@ export class FlightBookingsService
         this.releaseHeld(
           this.legsOf(expired),
           expired.cabinClass,
-          expired.passengers.length,
+          this.seatCount(expired.passengers),
         ),
       `release held seats of ${bookingId}`,
     );
@@ -163,7 +165,7 @@ export class FlightBookingsService
 
   async hold(userId: string, dto: CreateFlightBookingDto) {
     const p = await this.prepare(dto);
-    const n = dto.passengers.length;
+    const n = p.seatCount;
 
     // Atomic: seats are reserved only if enough remain, so concurrent
     // requests can never book more seats than available.
@@ -410,7 +412,7 @@ export class FlightBookingsService
           this.releaseBooked(
             this.legsOf(doc),
             doc.cabinClass,
-            doc.passengers.length,
+            this.seatCount(doc.passengers),
           ),
         `release booked seats of ${String(doc._id)}`,
       );
@@ -507,7 +509,7 @@ export class FlightBookingsService
         this.releaseBooked(
           this.legsOf(doc),
           doc.cabinClass,
-          doc.passengers.length,
+          this.seatCount(doc.passengers),
         ),
       `release booked seats of ${String(doc._id)}`,
     );
@@ -736,6 +738,12 @@ export class FlightBookingsService
     }
   }
 
+  private seatCount(
+    passengers: { type?: string | null }[],
+  ): number {
+    return passengers.filter((p) => (p.type ?? 'adult') !== 'infant').length;
+  }
+
   private legsOf(doc: FlightBookingDocument): Types.ObjectId[] {
     return doc.returnFlightId
       ? [doc.flightId, doc.returnFlightId]
@@ -823,6 +831,21 @@ export class FlightBookingsService
       );
     }
 
+    const adultCount = dto.passengers.filter(
+      (p) => (p.type ?? 'adult') === 'adult',
+    ).length;
+    const childCount = dto.passengers.filter((p) => p.type === 'child').length;
+    const infantCount = dto.passengers.filter((p) => p.type === 'infant').length;
+    if (adultCount < 1) {
+      throw new BadRequestException('At least one adult passenger is required');
+    }
+    if (infantCount > adultCount) {
+      throw new BadRequestException(
+        'Each infant must be accompanied by an adult passenger',
+      );
+    }
+    const seatCount = adultCount + childCount; // infants do not occupy a seat
+
     const legCount = ret ? 2 : 1;
     const baggageFee =
       calculateBaggageFee(
@@ -836,8 +859,11 @@ export class FlightBookingsService
       ) * legCount;
 
     const farePerPassenger = out.cabin.price + (ret?.cabin.price ?? 0);
-    const n = dto.passengers.length;
-    const totalPrice = calculateTotal(farePerPassenger, n, baggageFee);
+    // FLT-12: infants pay 10% of the fare and do not take a seat.
+    const baseFare = round2(
+      farePerPassenger * seatCount + farePerPassenger * 0.1 * infantCount,
+    );
+    const totalPrice = round2(baseFare + baggageFee);
 
     return {
       outbound: out.flight,
@@ -845,9 +871,10 @@ export class FlightBookingsService
       airline,
       lastArrival: ret ? ret.flight.arrivalTime : out.flight.arrivalTime,
       farePerPassenger,
-      baseFare: Math.round(farePerPassenger * n * 100) / 100,
+      baseFare,
       baggageFee,
       totalPrice,
+      seatCount,
     };
   }
 
