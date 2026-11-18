@@ -958,3 +958,13 @@ Asked Claude for a background job that marks flights Departed after their depart
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Code generation
+Prompt:
+Implement the admin bookings list combining flight and hotel bookings, with type/status/date filters and correct pagination.
+How the output was used:
+Added GET /api/admin/bookings, a shared query DTO, and AdminBookingsService. The service fetches the newest rows from the hotel and flight admin lists, merges and sorts by createdAt, then paginates the combined list. I added an optional limit to the hotel admin list for merged pagination. Tested as admin: type=all, type=hotel, and type=flight&status=Confirmed all returned valid responses. Build and lint pass.
+================================================

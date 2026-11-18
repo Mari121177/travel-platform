@@ -8,8 +8,10 @@ export interface AdminHotelBookingFilter {
   /** createdAt range, both ends inclusive. "YYYY-MM-DD" or an ISO date-time string. */
   from?: string;
   to?: string;
-  /** 1-based. The page size is fixed at 10 (GEN-05). */
+  /** 1-based. Default 1. */
   page?: number;
+  /** Default 10, maximum 100. Used by the combined admin bookings list. */
+  limit?: number;
 }
 
 export interface AdminHotelBookingItem {

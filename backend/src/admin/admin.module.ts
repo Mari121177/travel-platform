@@ -5,6 +5,8 @@ import { HotelsModule } from '../hotels/hotels.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { AdminAccountsController } from './admin-accounts.controller';
+import { AdminBookingsController } from './admin-bookings.controller';
+import { AdminBookingsService } from './admin-bookings.service';
 import { AdminAccountsService } from './admin-accounts.service';
 import { AdminSeeder } from './admin.seeder';
 import { AuditLogService } from './audit-log.service';
@@ -20,8 +22,17 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
     AirlinesModule,
     MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
   ],
-  controllers: [AdminAccountsController, AuditLogsController],
-  providers: [AdminAccountsService, AuditLogService, AdminSeeder],
+  controllers: [
+    AdminAccountsController,
+    AdminBookingsController,
+    AuditLogsController,
+  ],
+  providers: [
+    AdminAccountsService,
+    AdminBookingsService,
+    AuditLogService,
+    AdminSeeder,
+  ],
   exports: [AuditLogService],
 })
 export class AdminModule {}

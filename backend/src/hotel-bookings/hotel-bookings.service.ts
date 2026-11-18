@@ -553,6 +553,10 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   /** ACC-17: all hotel reservations, newest first, filter by status and createdAt range, 10 per page. */
   async listAllForAdmin(filter: AdminHotelBookingFilter = {}): Promise<AdminHotelBookingPage> {
     const page = filter.page && filter.page >= 1 ? Math.floor(filter.page) : 1;
+    const limit = Math.min(
+      100,
+      Math.max(1, Math.floor(filter.limit ?? PAGE_SIZE)),
+    );
     const today = todayString();
     const query: Record<string, unknown> = {};
 
@@ -584,8 +588,8 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
       this.bookingModel
         .find(query)
         .sort({ createdAt: -1 })
-        .skip((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
+        .skip((page - 1) * limit)
+        .limit(limit)
         .select('reference userId hotelId hotelName checkIn checkOut totalPrice status createdAt')
         .lean(),
       this.bookingModel.countDocuments(query),
@@ -608,7 +612,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
         : b.status) as AdminBookingStatus,
       createdAt: b.createdAt,
     }));
-    return { data, total, page, limit: PAGE_SIZE };
+    return { data, total, page, limit };
   }
 
   /**
