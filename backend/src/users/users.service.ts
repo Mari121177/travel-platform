@@ -1,10 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
+import { AccountStatus } from '../common/enums/account-status.enum';
+import { FlightBookingsService } from '../flight-bookings/flight-bookings.service';
+import { HotelBookingsService } from '../hotel-bookings/hotel-bookings.service';
 import { ReferenceDataService } from '../reference-data/reference-data.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User, UserDocument } from './schemas/user.schema';
@@ -14,6 +18,8 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly referenceData: ReferenceDataService,
+    private readonly hotelBookingsService: HotelBookingsService,
+    private readonly flightBookingsService: FlightBookingsService,
   ) {}
 
   findByEmail(email: string) {
@@ -52,6 +58,38 @@ export class UsersService {
       failedLoginAttempts: 0,
       lockUntil: null,
     });
+  }
+
+  // ACC-12: deactivate my account. Blocked while an upcoming Confirmed
+  // hotel reservation or flight booking exists. The account stays in the
+  // database; it can no longer log in and its content is filtered publicly.
+  async deactivateAccount(userId: string) {
+    const [hasHotel, hasFlight] = await Promise.all([
+      this.hotelBookingsService.hasUpcomingConfirmedBookings(userId),
+      this.flightBookingsService.hasUpcomingConfirmedBookings(userId),
+    ]);
+    if (hasHotel || hasFlight) {
+      throw new ConflictException(
+        'You cannot deactivate your account while you have upcoming Confirmed bookings',
+      );
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        status: AccountStatus.Deactivated,
+        refreshTokenHash: null,
+        lastActivityAt: null,
+      },
+      { new: true },
+    );
+    if (!updated) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+    return {
+      message: 'Account deactivated',
+      id: updated.id as string,
+    };
   }
 
   // Successful login: reset the counter, start the session, store the refresh token hash

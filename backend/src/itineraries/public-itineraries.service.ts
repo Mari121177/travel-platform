@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, PipelineStage } from 'mongoose';
+import { AccountStatus } from '../common/enums/account-status.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { City, CityDocument } from '../reference-data/schemas/city.schema';
 import {
@@ -97,6 +98,16 @@ export class PublicItinerariesService {
     }
     if (query.city) {
       conditions.push({ 'days.cityId': query.city.trim() });
+    }
+
+    // ACC-12: a deactivated user's public itineraries are hidden.
+    const deactivated = await this.userModel
+      .find({ status: AccountStatus.Deactivated })
+      .select('_id')
+      .lean()
+      .exec();
+    if (deactivated.length > 0) {
+      conditions.push({ ownerId: { $nin: deactivated.map((u) => u._id) } });
     }
 
     const pipeline: PipelineStage[] = [
@@ -321,6 +332,14 @@ export class PublicItinerariesService {
       itinerary.visibility !== ItineraryVisibility.Public ||
       itinerary.isHidden
     ) {
+      throw new NotFoundException('Itinerary not found');
+    }
+    const owner = await this.userModel
+      .findById(itinerary.ownerId)
+      .select('status')
+      .lean()
+      .exec();
+    if (!owner || owner.status === AccountStatus.Deactivated) {
       throw new NotFoundException('Itinerary not found');
     }
     return itinerary;

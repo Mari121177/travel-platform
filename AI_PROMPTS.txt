@@ -958,3 +958,13 @@ Asked Claude for a background job that marks flights Departed after their depart
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Code generation
+Prompt:
+Implement account self-deactivation with upcoming booking checks, cookie clearing and hiding the deactivated user's public itineraries.
+How the output was used:
+Added DELETE /api/users/me, checked both hotel and flight bookings for upcoming Confirmed reservations, set the account to Deactivated and cleared its session cookies, and excluded deactivated owners from public itinerary search/view/clone. Tested in Swagger: deactivation returned 200 and cleared cookies; the next login returned 403; test data was removed.
+================================================
