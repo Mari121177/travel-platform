@@ -918,6 +918,47 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+================================================
+Date: 2026-11-18
+Student: Adala
+Tool: Claude
+Related Requirement: FLT-19, FLT-21, FLT-22, FLT-23, FLT-25, FLT-26, FLT-29
+Prompt:
+How do I build the flight booking module (schema, atomic seat hold, expiry timer, payment port, cancel with refund, e-ticket PDF, passenger CSV) following the hotel-bookings pattern and the payments contract?
+How the output was used:
+Used the explanations and code as a base for the schema, service, controllers and the FLIGHT_BOOKING_PORT, then reviewed it, fixed compile errors and tested it in Swagger.
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-12, FLT-22
+Category: Debugging, Testing
+Prompt:
+Review Adala's flight-bookings PR before merge, especially passenger pricing and seat inventory, and fix any mismatch with the requirements.
+How the output was used:
+Found that infants were being charged a full fare and occupying a seat. Updated the booking summary and hold logic so adults and children pay the full fare, infants pay 10%, and only adults/children reserve seats. Verified with the shared test flight: one adult plus one infant produced a total of 275, held exactly one seat, FLT-29 returned the flight bookings/CSV, and the e-ticket endpoint returned a valid PDF. Test data was cleaned up afterwards.
+================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-03 to FLT-06, FLT-30
+Prompt:
+Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-30
+Prompt:
+Asked Claude for a background job that marks flights Departed after their departure time.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+================================================
 Date: 2026-11-17
 Student: Mariam
 Tool: OpenCode
@@ -927,4 +968,14 @@ Prompt:
 Implement the admin provider deactivation endpoints for hotel and airline providers, including hiding them from search, keeping existing confirmed bookings valid, notifying affected users and writing an audit log entry.
 How the output was used:
 Added PATCH /api/admin/providers/:type/:id/deactivate and reactivate, wired HotelsService.setHotelActive and AirlinesService.setActive, added provider-type parameter validation, notified provider moderators plus users with confirmed hotel bookings, recorded DEACTIVATE_PROVIDER/REACTIVATE_PROVIDER in the audit log, and returned the affected-user count. Build and lint pass. Airline passenger notifications remain pending because the flight-bookings module does not exist yet.
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01
+Category: Code generation, Testing
+Prompt:
+Complete the airline side of provider deactivation now that flight bookings exists, so passengers with Confirmed bookings are notified too.
+How the output was used:
+Added getUserIdsWithConfirmedBookingsForAirline to FlightBookingsService and used it in AdminProvidersService alongside hotel guests. Tested PATCH deactivate/reactivate for the EgyptAir test provider as admin: both returned 200 and the airline was restored to active. Build and lint pass.
 ================================================

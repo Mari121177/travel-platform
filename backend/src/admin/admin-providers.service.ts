@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { AirlinesService } from '../airlines/airlines.service';
 import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { FlightBookingsService } from '../flight-bookings/flight-bookings.service';
 import { HotelBookingsService } from '../hotel-bookings/hotel-bookings.service';
 import { HotelsService } from '../hotels/hotels.service';
 import { NotificationType } from '../notifications/notification-type.enum';
@@ -20,6 +21,7 @@ export class AdminProvidersService {
     private readonly hotelsService: HotelsService,
     private readonly airlinesService: AirlinesService,
     private readonly hotelBookingsService: HotelBookingsService,
+    private readonly flightBookingsService: FlightBookingsService,
     private readonly notificationsService: NotificationsService,
     private readonly auditLogService: AuditLogService,
   ) {}
@@ -56,13 +58,16 @@ export class AdminProvidersService {
 
     const recipients = new Set(moderators.map((u) => String(u._id)));
 
-    // Users with Confirmed hotel bookings remain valid, but they should know.
-    // Flight bookings are added when FLIGHT_BOOKING_PORT exists.
-    if (!isActive && type === ModeratorType.Hotel) {
+    // Users with Confirmed bookings remain valid, but they should know.
+    if (!isActive) {
       const guests =
-        await this.hotelBookingsService.getUserIdsWithConfirmedBookings(
-          providerId,
-        );
+        type === ModeratorType.Hotel
+          ? await this.hotelBookingsService.getUserIdsWithConfirmedBookings(
+              providerId,
+            )
+          : await this.flightBookingsService.getUserIdsWithConfirmedBookingsForAirline(
+              providerId,
+            );
       for (const guestId of guests) recipients.add(guestId);
     }
 
