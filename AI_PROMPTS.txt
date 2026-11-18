@@ -938,3 +938,23 @@ Review Adala's flight-bookings PR before merge, especially passenger pricing and
 How the output was used:
 Found that infants were being charged a full fare and occupying a seat. Updated the booking summary and hold logic so adults and children pay the full fare, infants pay 10%, and only adults/children reserve seats. Verified with the shared test flight: one adult plus one infant produced a total of 275, held exactly one seat, FLT-29 returned the flight bookings/CSV, and the e-ticket endpoint returned a valid PDF. Test data was cleaned up afterwards.
 ================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-03 to FLT-06, FLT-30
+Prompt:
+Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-30
+Prompt:
+Asked Claude for a background job that marks flights Departed after their departure time.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
