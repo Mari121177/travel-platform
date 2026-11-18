@@ -15,6 +15,7 @@ import { Role } from '../common/enums/role.enum';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { ContentParamsDto } from './dto/content-params.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
+import { ReportIdParamDto } from './dto/report-id-param.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
 import { ReportsService } from './reports.service';
 
@@ -44,8 +45,8 @@ export class AdminReportsController {
   @ApiOperation({ summary: 'GEN-10: one report' })
   @ApiOkResponse({ description: 'The report' })
   @ApiNotFoundResponse({ description: 'Report not found' })
-  findOne(@Param('id') id: string) {
-    return this.reportsService.findOne(id);
+  findOne(@Param() params: ReportIdParamDto) {
+    return this.reportsService.findOne(params.id);
   }
 
   @Patch('reports/:id')
@@ -56,10 +57,10 @@ export class AdminReportsController {
   @ApiNotFoundResponse({ description: 'Report or content not found' })
   resolve(
     @CurrentUser() admin: AuthUser,
-    @Param('id') id: string,
+    @Param() params: ReportIdParamDto,
     @Body() dto: ResolveReportDto,
   ) {
-    return this.reportsService.resolve(admin, id, dto);
+    return this.reportsService.resolve(admin, params.id, dto);
   }
 
   @Patch('content/:type/:id')
