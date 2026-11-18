@@ -918,3 +918,23 @@ baggage and cancellation policy. A malformed id returns 400 and an unknown id re
 The route is declared after /flights/search so that search is not read as an id. 
 I reviewed the code and tested in Swagger.
 ================================================
+================================================
+Date: 2026-11-18
+Student: Adala
+Tool: Claude
+Related Requirement: FLT-19, FLT-21, FLT-22, FLT-23, FLT-25, FLT-26, FLT-29
+Prompt:
+How do I build the flight booking module (schema, atomic seat hold, expiry timer, payment port, cancel with refund, e-ticket PDF, passenger CSV) following the hotel-bookings pattern and the payments contract?
+How the output was used:
+Used the explanations and code as a base for the schema, service, controllers and the FLIGHT_BOOKING_PORT, then reviewed it, fixed compile errors and tested it in Swagger.
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-12, FLT-22
+Category: Debugging, Testing
+Prompt:
+Review Adala's flight-bookings PR before merge, especially passenger pricing and seat inventory, and fix any mismatch with the requirements.
+How the output was used:
+Found that infants were being charged a full fare and occupying a seat. Updated the booking summary and hold logic so adults and children pay the full fare, infants pay 10%, and only adults/children reserve seats. Verified with the shared test flight: one adult plus one infant produced a total of 275, held exactly one seat, FLT-29 returned the flight bookings/CSV, and the e-ticket endpoint returned a valid PDF. Test data was cleaned up afterwards.
+================================================
