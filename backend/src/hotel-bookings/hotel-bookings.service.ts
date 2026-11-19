@@ -584,6 +584,14 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     }
     if (createdAt.$gte || createdAt.$lte) query.createdAt = createdAt;
 
+    // ACC-17: travel-date filter (hotel check-in date).
+    if (filter.travelFrom || filter.travelTo) {
+      const checkIn: Record<string, string> = {};
+      if (filter.travelFrom) checkIn.$gte = filter.travelFrom;
+      if (filter.travelTo) checkIn.$lte = filter.travelTo;
+      query.checkIn = checkIn;
+    }
+
     const [rows, total] = await Promise.all([
       this.bookingModel
         .find(query)

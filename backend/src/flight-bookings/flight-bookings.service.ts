@@ -631,6 +631,13 @@ export class FlightBookingsService
     if (filter.to) createdAt.$lte = this.parseDate(filter.to, true);
     if (Object.keys(createdAt).length) query.createdAt = createdAt;
 
+    if (filter.travelFrom || filter.travelTo) {
+      const departure: Record<string, Date> = {};
+      if (filter.travelFrom) departure.$gte = this.parseDate(filter.travelFrom, false);
+      if (filter.travelTo) departure.$lte = this.parseDate(filter.travelTo, true);
+      query.departureTime = departure;
+    }
+
     if (filter.status === 'Completed') {
       query.status = FlightBookingStatus.Confirmed;
       query.arrivalTime = { $lt: now };

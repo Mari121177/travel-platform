@@ -958,6 +958,18 @@ Asked Claude for a background job that marks flights Departed after their depart
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: GEN-09, GEN-10, GEN-07
+Category: Code generation
+Prompt:
+Implement user content reporting and the admin moderation endpoints for reports and direct content hide/delete across posts, comments, reviews and itineraries.
+How the output was used:
+Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
+================================================
+================================================
 Date: 2026-11-18
 Student: Mariam
 Tool: OpenCode
@@ -967,4 +979,14 @@ Prompt:
 Implement the admin bookings list combining flight and hotel bookings, with type/status/date filters and correct pagination.
 How the output was used:
 Added GET /api/admin/bookings, a shared query DTO, and AdminBookingsService. The service fetches the newest rows from the hotel and flight admin lists, merges and sorts by createdAt, then paginates the combined list. I added an optional limit to the hotel admin list for merged pagination. Tested as admin: type=all, type=hotel, and type=flight&status=Confirmed all returned valid responses. Build and lint pass.
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: add travel-date filtering in addition to createdAt, and verify that type=all accepts Completed, Expired and Cancelled on both hotel and flight sides.
+How the output was used:
+Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
 ================================================

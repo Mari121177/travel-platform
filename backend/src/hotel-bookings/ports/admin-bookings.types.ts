@@ -12,6 +12,9 @@ export interface AdminHotelBookingFilter {
   page?: number;
   /** Default 10, maximum 100. Used by the combined admin bookings list. */
   limit?: number;
+  /** checkIn range, both ends inclusive, YYYY-MM-DD. */
+  travelFrom?: string;
+  travelTo?: string;
 }
 
 export interface AdminHotelBookingItem {

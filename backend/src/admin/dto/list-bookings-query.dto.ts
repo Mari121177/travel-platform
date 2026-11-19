@@ -42,6 +42,16 @@ export class ListAdminBookingsQueryDto {
   @IsISO8601()
   to?: string;
 
+  @ApiPropertyOptional({ description: 'Travel start date (inclusive)' })
+  @IsOptional()
+  @IsISO8601()
+  travelFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Travel end date (inclusive)' })
+  @IsOptional()
+  @IsISO8601()
+  travelTo?: string;
+
   @ApiPropertyOptional({ default: 1, maximum: 10 })
   @IsOptional()
   @Type(() => Number)

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { AdminFlightBookingFilter } from '../flight-bookings/ports/admin-flight-bookings.types';
 import { FlightBookingsService } from '../flight-bookings/flight-bookings.service';
 import type { AdminHotelBookingFilter } from '../hotel-bookings/ports/admin-bookings.types';
@@ -21,6 +21,13 @@ export class AdminBookingsService {
   // and createdAt range. Each side supplies its newest rows, then we merge and
   // page the combined list.
   async list(query: ListAdminBookingsQueryDto) {
+    if (
+      query.travelFrom &&
+      query.travelTo &&
+      query.travelFrom > query.travelTo
+    ) {
+      throw new BadRequestException('travelFrom must not be after travelTo');
+    }
     const page = query.page ?? 1;
     const fetchLimit = Math.min(100, page * PAGE_SIZE);
 
@@ -36,6 +43,8 @@ export class AdminBookingsService {
             status: query.status as AdminHotelBookingFilter['status'],
             from: query.from,
             to: query.to,
+            travelFrom: query.travelFrom,
+            travelTo: query.travelTo,
             page: 1,
             limit: fetchLimit,
           })
@@ -45,6 +54,8 @@ export class AdminBookingsService {
             status: query.status as AdminFlightBookingFilter['status'],
             from: query.from,
             to: query.to,
+            travelFrom: query.travelFrom,
+            travelTo: query.travelTo,
             page: 1,
             limit: fetchLimit,
           })
