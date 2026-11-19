@@ -3,12 +3,16 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { AirlinesService } from '../airlines/airlines.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { FlightBookingsService } from '../flight-bookings/flight-bookings.service';
+import { NotificationType } from '../notifications/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Airport, AirportDocument } from '../reference-data/schemas/airport.schema';
 import { Cabin, CabinDocument } from './cabin.schema';
 import {
@@ -20,11 +24,15 @@ import { localDate, localToUtc, utcToLocal } from './utils/time.util';
 
 @Injectable()
 export class FlightsService {
+  private readonly logger = new Logger(FlightsService.name);
+
   constructor(
     @InjectModel(Flight.name) private readonly flights: Model<FlightDocument>,
     @InjectModel(Cabin.name) private readonly cabins: Model<CabinDocument>,
     @InjectModel(Airport.name) private readonly airports: Model<AirportDocument>,
     private readonly airlines: AirlinesService,
+    private readonly bookings: FlightBookingsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ---------------- FLT-03 ----------------
@@ -96,20 +104,23 @@ export class FlightsService {
 
     const ap = await this.loadAirports([dep, arr]);
     if (!ap.has(dep) || !ap.has(arr)) throw new BadRequestException('Unknown airport');
+    const depZone = ap.get(dep)!.timeZone;
+    const arrZone = ap.get(arr)!.timeZone;
 
-    const depUtc = dto.departureTime ? localToUtc(dto.departureTime, ap.get(dep)!.timeZone) : flight.departureTime;
-    const arrUtc = dto.arrivalTime ? localToUtc(dto.arrivalTime, ap.get(arr)!.timeZone) : flight.arrivalTime;
+    const oldDep = flight.departureTime;
+    const oldArr = flight.arrivalTime;
+    const depUtc = dto.departureTime ? localToUtc(dto.departureTime, depZone) : oldDep;
+    const arrUtc = dto.arrivalTime ? localToUtc(dto.arrivalTime, arrZone) : oldArr;
     if (arrUtc <= depUtc) throw new BadRequestException('Arrival must be after departure (compared in UTC)');
     if (depUtc <= new Date()) throw new BadRequestException('Departure cannot be in the past');
 
-    const timeChanged =
-      depUtc.getTime() !== flight.departureTime.getTime() || arrUtc.getTime() !== flight.arrivalTime.getTime();
+    const timeChanged = depUtc.getTime() !== oldDep.getTime() || arrUtc.getTime() !== oldArr.getTime();
 
     flight.departureAirport = dep;
     flight.arrivalAirport = arr;
     flight.departureTime = depUtc;
     flight.arrivalTime = arrUtc;
-    flight.departureLocalDate = localDate(depUtc, ap.get(dep)!.timeZone);
+    flight.departureLocalDate = localDate(depUtc, depZone);
     try {
       await flight.save();
     } catch (e: any) {
@@ -119,10 +130,8 @@ export class FlightsService {
       throw e;
     }
 
-    if (timeChanged) {
-      // TODO (flight bookings + notifications): send an in-app notification to passengers
-      // with Confirmed bookings on this flight (FLT-05, GEN-01).
-    }
+    // FLT-05: notify passengers with Confirmed bookings (never blocks the update)
+    if (timeChanged) await this.notifyScheduleChange(flight, depZone, arrZone, oldDep);
     return this.view(flight);
   }
 
@@ -134,9 +143,11 @@ export class FlightsService {
     flight.cancelReason = dto.reason;
     flight.cancelledAt = new Date();
     await flight.save();
-    // TODO (flight bookings + payments + notifications): cancel all Confirmed bookings with a
-    // 100% refund (PAY-03), release pending seat holds, notify passengers (GEN-01).
-    return this.view(flight);
+
+    // Adala's method: cancels Confirmed bookings (100% refund), releases seats,
+    // expires pending holds and sends the FLIGHT_CANCELLED notifications itself.
+    const bookings = await this.bookings.cancelAllForFlight(flight.id);
+    return { ...(await this.view(flight)), bookings };
   }
 
   // ---------------- FLT-04 / FLT-05: cabins ----------------
@@ -181,6 +192,23 @@ export class FlightsService {
   }
 
   // ---------------- helpers ----------------
+  private async notifyScheduleChange(flight: FlightDocument, depZone: string, arrZone: string, oldDep: Date) {
+    try {
+      const userIds = await this.bookings.findConfirmedUserIdsForFlight(flight.id);
+      if (!userIds.length) return;
+      const message =
+        `Schedule change for flight ${flight.flightNumber}: departure from ${flight.departureAirport} is now ` +
+        `${utcToLocal(flight.departureTime, depZone)} (was ${utcToLocal(oldDep, depZone)}), ` +
+        `arrival at ${flight.arrivalAirport} is now ${utcToLocal(flight.arrivalTime, arrZone)}.`;
+      await this.notifications.sendMany(userIds, NotificationType.FLIGHT_SCHEDULE_CHANGED, message, {
+        flightId: flight.id,
+        flightNumber: flight.flightNumber,
+      });
+    } catch (err) {
+      this.logger.error(`Schedule-change notification failed for flight ${flight.id}: ${(err as Error).message}`);
+    }
+  }
+
   private cabinView(c: any) {
     return { ...c, availableSeats: c.totalSeats - c.bookedSeats - c.heldSeats };
   }
