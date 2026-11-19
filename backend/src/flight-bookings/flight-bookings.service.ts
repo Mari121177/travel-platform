@@ -613,6 +613,16 @@ export class FlightBookingsService
     return !!found;
   }
 
+  // ACC-12: active Pending Payment holds also block deactivation.
+  async hasActiveHold(userId: string): Promise<boolean> {
+    const found = await this.bookingModel.exists({
+      userId: new Types.ObjectId(userId),
+      status: FlightBookingStatus.PendingPayment,
+      holdExpiresAt: { $gt: new Date() },
+    });
+    return !!found;
+  }
+
   // ---------- ACC-17: used by GET /api/admin/bookings ----------
 
   async listAllForAdmin(

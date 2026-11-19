@@ -958,6 +958,18 @@ Asked Claude for a background job that marks flights Departed after their depart
 How the output was used:
 Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
 ================================================
+================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: GEN-09, GEN-10, GEN-07
+Category: Code generation
+Prompt:
+Implement user content reporting and the admin moderation endpoints for reports and direct content hide/delete across posts, comments, reviews and itineraries.
+How the output was used:
+Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
+================================================
+================================================
 Date: 2026-11-18
 Student: Mariam
 Tool: OpenCode
@@ -967,4 +979,14 @@ Prompt:
 Implement account self-deactivation with upcoming booking checks, cookie clearing and hiding the deactivated user's public itineraries.
 How the output was used:
 Added DELETE /api/users/me, checked both hotel and flight bookings for upcoming Confirmed reservations, set the account to Deactivated and cleared its session cookies, and excluded deactivated owners from public itinerary search/view/clone. Tested in Swagger: deactivation returned 200 and cleared cookies; the next login returned 403; test data was removed.
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: block deactivation while an active Pending Payment hold exists, and make reviews of deactivated users show as "Deleted user".
+How the output was used:
+Added hasActiveHold to both booking services, included it in the deactivation check, and added reviewer names/status to the public review list. Tested with a future flight hold: DELETE /api/users/me returned 409; after removing the hold it returned 200. Application startup and build/lint pass. Test data was removed.
 ================================================

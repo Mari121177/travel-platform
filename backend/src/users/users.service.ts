@@ -64,13 +64,16 @@ export class UsersService {
   // hotel reservation or flight booking exists. The account stays in the
   // database; it can no longer log in and its content is filtered publicly.
   async deactivateAccount(userId: string) {
-    const [hasHotel, hasFlight] = await Promise.all([
-      this.hotelBookingsService.hasUpcomingConfirmedBookings(userId),
-      this.flightBookingsService.hasUpcomingConfirmedBookings(userId),
-    ]);
-    if (hasHotel || hasFlight) {
+    const [hasHotel, hasHotelHold, hasFlight, hasFlightHold] =
+      await Promise.all([
+        this.hotelBookingsService.hasUpcomingConfirmedBookings(userId),
+        this.hotelBookingsService.hasActiveHold(userId),
+        this.flightBookingsService.hasUpcomingConfirmedBookings(userId),
+        this.flightBookingsService.hasActiveHold(userId),
+      ]);
+    if (hasHotel || hasHotelHold || hasFlight || hasFlightHold) {
       throw new ConflictException(
-        'You cannot deactivate your account while you have upcoming Confirmed bookings',
+        'You cannot deactivate your account while you have upcoming Confirmed bookings or an active payment hold',
       );
     }
 
