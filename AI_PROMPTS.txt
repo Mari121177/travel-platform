@@ -969,3 +969,13 @@ Implement user content reporting and the admin moderation endpoints for reports 
 How the output was used:
 Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
 ================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19, FLT-12
+Category: Debugging, Testing
+Prompt:
+Fix the remaining FLT-19 passenger validation gap by checking that each passenger's declared type matches their age at departure.
+How the output was used:
+Added infant (<2), child (2-11) and adult (12+) validation based on date of birth at the outbound departure time. Tested via the booking summary: an adult type with a 6-year-old date of birth returned 400; a correct child returned 200; a correct infant returned 200. Test user removed; build and lint pass.
+================================================
