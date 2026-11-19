@@ -962,12 +962,24 @@ Starting point for my module; reviewed against the requirements sheet and tested
 Date: 2026-11-17
 Student: Mariam
 Tool: OpenCode
+Related Requirement: GEN-09, GEN-10, GEN-07
+Category: Code generation
+Prompt:
+Implement user content reporting and the admin moderation endpoints for reports and direct content hide/delete across posts, comments, reviews and itineraries.
+How the output was used:
+Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
+================================================
+================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
 Related Requirement: ACC-15, GEN-01, GEN-07
 Category: Code generation
 Prompt:
 Implement the admin provider deactivation endpoints for hotel and airline providers, including hiding them from search, keeping existing confirmed bookings valid, notifying affected users and writing an audit log entry.
 How the output was used:
 Added PATCH /api/admin/providers/:type/:id/deactivate and reactivate, wired HotelsService.setHotelActive and AirlinesService.setActive, added provider-type parameter validation, notified provider moderators plus users with confirmed hotel bookings, recorded DEACTIVATE_PROVIDER/REACTIVATE_PROVIDER in the audit log, and returned the affected-user count. Build and lint pass. Airline passenger notifications remain pending because the flight-bookings module does not exist yet.
+================================================
 ================================================
 Date: 2026-11-18
 Student: Mariam
@@ -978,4 +990,14 @@ Prompt:
 Complete the airline side of provider deactivation now that flight bookings exists, so passengers with Confirmed bookings are notified too.
 How the output was used:
 Added getUserIdsWithConfirmedBookingsForAirline to FlightBookingsService and used it in AdminProvidersService alongside hotel guests. Tested PATCH deactivate/reactivate for the EgyptAir test provider as admin: both returned 200 and the airline was restored to active. Build and lint pass.
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15
+Category: Debugging, Testing
+Prompt:
+Address Hana's review of provider deactivation: reject deactivating an already-deactivated provider and reactivating an already-active one, so notifications and audit entries are not duplicated.
+How the output was used:
+Loaded the current provider before updating and returned 409 when the requested state already matched. Tested as admin on EgyptAir: deactivate 200, second deactivate 409, reactivate 200, second reactivate 409; airline restored active. Application startup, build and lint pass.
 ================================================

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AirlinesService } from '../airlines/airlines.service';
@@ -34,6 +34,16 @@ export class AdminProvidersService {
     providerId: string,
     isActive: boolean,
   ) {
+    const current =
+      type === ModeratorType.Hotel
+        ? await this.hotelsService.findHotelForAdmin(providerId)
+        : await this.airlinesService.findAirlineForAdmin(providerId);
+    if (current.isActive === isActive) {
+      throw new ConflictException(
+        `Provider is already ${isActive ? 'active' : 'deactivated'}`,
+      );
+    }
+
     const provider =
       type === ModeratorType.Hotel
         ? await this.hotelsService.setHotelActive(providerId, isActive)

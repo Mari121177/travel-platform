@@ -7,6 +7,9 @@ export const AuditAction = {
   CreateModerator: 'CREATE_MODERATOR',
   DeactivateProvider: 'DEACTIVATE_PROVIDER',
   ReactivateProvider: 'REACTIVATE_PROVIDER',
+  DismissReport: 'DISMISS_REPORT',
+  HideContent: 'HIDE_CONTENT',
+  DeleteContent: 'DELETE_CONTENT',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
