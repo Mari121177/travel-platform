@@ -1121,3 +1121,46 @@ Address Habiba's review: paginate GET /api/favorites with GEN-05 page size 10.
 How the output was used:
 Added page query validation, skip/limit, total/page/limit/totalPages while keeping labels for the current page. Tested page=1 on an empty list: returned total 0, page 1, limit 10, totalPages 0. Build and lint pass.
 ================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19, FLT-12
+Category: Debugging, Testing
+Prompt:
+Fix the remaining FLT-19 passenger validation gap by checking that each passenger's declared type matches their age at departure.
+How the output was used:
+Added infant (<2), child (2-11) and adult (12+) validation based on date of birth at the outbound departure time. Tested via the booking summary: an adult type with a 6-year-old date of birth returned 400; a correct child returned 200; a correct infant returned 200. Test user removed; build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Hana's final FLT-19 edge cases: reject a negative age and confirm invalid dates are rejected.
+How the output was used:
+Added Number.isFinite(age) and age < 0 guards before type matching. Confirmed the DTO already rejects invalid dates via IsDateString. Tested: DOB after departure returned 400 with a clear message; DOB "not-a-date" returned 400 from DTO validation. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Maya's confirmed gap: reject future dates of birth and impossible calendar dates that JavaScript would otherwise roll over.
+How the output was used:
+Added an explicit DOB validity check before age matching: the date must parse to the same YYYY-MM-DD and must not be after departure. Tested the exact future-infant request (2030-01-01): returned 400. Tested 2026-02-31: returned 400. Build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: reject any future date of birth, including one before departure.
+How the output was used:
+Changed the DOB guard from comparing with departure time to comparing with the current date. Tested the exact case (DOB 2026-12-01, infant, departure 2026-12-20): returned 400. A valid 2026-01-01 infant still returned 201. Build/lint pass.
+================================================

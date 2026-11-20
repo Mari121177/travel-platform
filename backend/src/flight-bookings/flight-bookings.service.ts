@@ -845,6 +845,35 @@ export class FlightBookingsService
       }
     }
 
+    // FLT-12/FLT-19: the declared passenger type must match the age at
+    // departure: infant <2, child 2-11, adult 12+.
+    dto.passengers.forEach((p, i) => {
+      const dobText = p.dateOfBirth.slice(0, 10);
+      const dob = new Date(`${dobText}T00:00:00Z`);
+      if (
+        Number.isNaN(dob.getTime()) ||
+        dob.toISOString().slice(0, 10) !== dobText ||
+        dob > new Date()
+      ) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} has an invalid date of birth`,
+        );
+      }
+      const age = this.ageOn(p.dateOfBirth, out.flight.departureTime);
+      if (!Number.isFinite(age) || age < 0) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} dateOfBirth must be a valid date before departure`,
+        );
+      }
+      const expected = age < 2 ? 'infant' : age < 12 ? 'child' : 'adult';
+      const declared = p.type ?? 'adult';
+      if (declared !== expected) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} is ${age} year(s) old at departure; type must be ${expected}`,
+        );
+      }
+    });
+
     // FLT-08: extra bags per passenger and weight per bag are limited
     const maxBags = airline.maxExtraBags ?? 0;
     const bagCounts = dto.passengers.map((p) => p.extraBags?.length ?? 0);
@@ -937,6 +966,16 @@ export class FlightBookingsService
     if (!doc.holdExpiresAt || doc.holdExpiresAt < new Date()) {
       throw new ConflictException('The hold on this booking has expired');
     }
+  }
+
+  private ageOn(dateOfBirth: string, at: Date): number {
+    const dob = new Date(`${dateOfBirth.slice(0, 10)}T00:00:00Z`);
+    let age = at.getUTCFullYear() - dob.getUTCFullYear();
+    const month = at.getUTCMonth() - dob.getUTCMonth();
+    if (month < 0 || (month === 0 && at.getUTCDate() < dob.getUTCDate())) {
+      age--;
+    }
+    return age;
   }
 
   private parseDate(value: string, endOfDay: boolean): Date {
