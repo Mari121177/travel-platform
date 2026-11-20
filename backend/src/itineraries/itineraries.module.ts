@@ -18,6 +18,8 @@ import { ItineraryDaysController } from './itinerary-days.controller';
 import { ItineraryDaysService } from './itinerary-days.service';
 import { ItineraryFlightsController } from './itinerary-flights.controller';
 import { ItineraryFlightsService } from './itinerary-flights.service';
+import { ItineraryPdfController } from './itinerary-pdf.controller';
+import { ItineraryPdfService } from './itinerary-pdf.service';
 import { ItineraryHotelsController } from './itinerary-hotels.controller';
 import { ItineraryHotelsService } from './itinerary-hotels.service';
 import { PublicItinerariesController } from './public-itineraries.controller';
@@ -62,6 +64,7 @@ import { TransportCostsService } from './transport-costs.service';
     BudgetsController,
     TransportCostsController,
     ItineraryHotelsController,
+    ItineraryPdfController,
     ItineraryFlightsController,
   ],
   providers: [
@@ -74,6 +77,7 @@ import { TransportCostsService } from './transport-costs.service';
     TransportCostsService,
     ExchangeRatesService,
     ItineraryHotelsService,
+    ItineraryPdfService,
     ItineraryFlightsService,
   ],
   exports: [

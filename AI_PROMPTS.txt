@@ -1059,12 +1059,57 @@ Added travelFrom/travelTo to the admin bookings query and both admin booking fil
 Date: 2026-11-20
 Student: Mariam
 Tool: OpenCode
+Related Requirement: HTL-26
+Category: Code generation
+Prompt:
+Add the hotel moderator review reply bonus.
+How the output was used:
+Added optional reply/repliedAt fields to reviews, a validated PATCH /api/reviews/:id/reply endpoint for hotel moderators, and an ownership check against assignedProviderId. Tested with a real review and hotel moderator: reply returned 200 with the reply and timestamp. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BLG-13
+Category: Code generation
+Prompt:
+Implement the bonus that lets a post author attach one of their itineraries.
+How the output was used:
+Added an optional itineraryId to posts and DTOs, validated ownership in create/update, and exposed it on the public post page. Tested: created an itinerary and a published post with that itinerary; the public post returned the matching itineraryId. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-28
+Category: Code generation
+Prompt:
+Implement PDF export for the owner's itinerary.
+How the output was used:
+Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-01
+Category: Code generation
+Prompt:
+Implement the admin analytics bonus: confirmed bookings and revenue per provider over a selected period.
+How the output was used:
+Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
 Related Requirement: BON-02
 Category: Code generation
 Prompt:
 Implement the favourites bonus for active hotels and public itineraries.
 How the output was used:
 Added the favourites module, unique (userId,type,targetId) schema, POST/GET/DELETE endpoints, target validation and labels in the list. Tested add/list/delete for an active hotel; build and lint pass. Test user/favourite cleaned up.
+================================================
 ================================================
 Date: 2026-11-20
 Student: Mariam

@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -92,4 +93,11 @@ export class CreatePostDto {
   @IsOptional()
   @IsEnum(PostStatus)
   status?: PostStatus;
+
+  @ApiPropertyOptional({
+    description: 'BLG-13: one of my itineraries to attach to this post',
+  })
+  @IsOptional()
+  @IsMongoId()
+  itineraryId?: string;
 }

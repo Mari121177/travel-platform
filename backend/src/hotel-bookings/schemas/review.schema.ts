@@ -22,6 +22,13 @@ export class Review {
   // GEN-10: hidden content is visible only to its author and admins
   @Prop({ type: Boolean, default: false })
   isHidden: boolean;
+
+  // HTL-26: optional reply from the hotel's moderator
+  @Prop({ type: String, trim: true, maxlength: 1000, default: null })
+  reply?: string | null;
+
+  @Prop({ type: Date, default: null })
+  repliedAt?: Date | null;
 }
 
 export type ReviewDocument = HydratedDocument<Review>;
