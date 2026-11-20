@@ -1066,3 +1066,14 @@ Add the hotel moderator review reply bonus.
 How the output was used:
 Added optional reply/repliedAt fields to reviews, a validated PATCH /api/reviews/:id/reply endpoint for hotel moderators, and an ownership check against assignedProviderId. Tested with a real review and hotel moderator: reply returned 200 with the reply and timestamp. Build and lint pass.
 ================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BLG-13
+Category: Code generation
+Prompt:
+Implement the bonus that lets a post author attach one of their itineraries.
+How the output was used:
+Added an optional itineraryId to posts and DTOs, validated ownership in create/update, and exposed it on the public post page. Tested: created an itinerary and a published post with that itinerary; the public post returned the matching itineraryId. Build and lint pass; test data removed.
+================================================
