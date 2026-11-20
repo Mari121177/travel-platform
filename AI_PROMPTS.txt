@@ -1088,3 +1088,14 @@ Implement PDF export for the owner's itinerary.
 How the output was used:
 Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
 ================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-01
+Category: Code generation
+Prompt:
+Implement the admin analytics bonus: confirmed bookings and revenue per provider over a selected period.
+How the output was used:
+Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
+================================================
