@@ -66,9 +66,8 @@ export class CreateCabinDto {
   @ApiProperty({ example: 23, description: 'Max kg per bag' }) @IsNumber() @IsPositive() maxBagWeightKg: number;
 }
 
+/** FLT-05: only the price and the seat count of a cabin may be edited. */
 export class UpdateCabinDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) totalSeats?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @IsPositive() price?: number;
-  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) freeBags?: number;
-  @ApiPropertyOptional() @IsOptional() @IsNumber() @IsPositive() maxBagWeightKg?: number;
 }
