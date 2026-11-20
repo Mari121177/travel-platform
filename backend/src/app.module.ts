@@ -19,6 +19,7 @@ import { BlogModule } from './blog/blog.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ReferenceDataModule } from './reference-data/reference-data.module';
+import { FavoritesModule } from './favorites/favorites.module';
 import { ReportsModule } from './reports/reports.module';
 
 @Module({
@@ -47,6 +48,7 @@ import { ReportsModule } from './reports/reports.module';
     UploadsModule,
     ReferenceDataModule,
     ReportsModule,
+    FavoritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

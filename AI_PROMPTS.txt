@@ -1099,3 +1099,25 @@ Implement the admin analytics bonus: confirmed bookings and revenue per provider
 How the output was used:
 Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
 ================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Code generation
+Prompt:
+Implement the favourites bonus for active hotels and public itineraries.
+How the output was used:
+Added the favourites module, unique (userId,type,targetId) schema, POST/GET/DELETE endpoints, target validation and labels in the list. Tested add/list/delete for an active hotel; build and lint pass. Test user/favourite cleaned up.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: paginate GET /api/favorites with GEN-05 page size 10.
+How the output was used:
+Added page query validation, skip/limit, total/page/limit/totalPages while keeping labels for the current page. Tested page=1 on an empty list: returned total 0, page 1, limit 10, totalPages 0. Build and lint pass.
+================================================
