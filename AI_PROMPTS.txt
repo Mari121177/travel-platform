@@ -1,0 +1,1166 @@
+================================================
+Date: 2026-10-31
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01 to HTL-15 (planning)
+
+Prompt:
+Explain the project idea simply. Here is the team's task distribution;
+I am member 5 (Hotels, rooms, availability, policies). Which team members
+will I need to communicate with?
+
+How the output was used:
+Used to understand the overall platform and my module's scope, and to
+identify my dependencies: hotel bookings (member 6) for availability and
+reservations, and the team lead for auth, roles and seeded reference data.
+================================================
+
+Date: 2026-11-04
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-09, HTL-10
+
+Prompt:
+What should the schema, controller, service and module files in the hotels
+folder look like? Give me the code for each file one by one and explain
+what each part does. (Follow-up discussion on the format for check-in and
+check-out times.)
+
+How the output was used:
+Used to set up the hotels folder structure and as the first draft of
+hotel.schema.ts, room.schema.ts, hotels.module.ts, hotels.controller.ts and
+hotels.service.ts. Decided to store check-in/check-out times as "HH:mm"
+(24-hour) strings validated with a regex. The drafts were later reviewed
+and reworked (see entries from 2026-11-07).
+================================================
+
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-04, HTL-06, HTL-10
+
+Prompt:
+Review my Hotel and Room Mongoose schemas for the hotels module and explain
+each file step by step.
+
+How the output was used:
+Added date-range arrays (availability/blocked, inclusive last night) and
+indexes to Room, a cancellation-tier sub-schema to Hotel, and learned how
+schemas, services, controllers and modules fit together in NestJS.
+Later removed moderatorId and currency after the team decided the moderator
+link lives on the User and the platform uses one currency (PAY-04).
+================================================
+
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-05, HTL-06, HTL-09, HTL-10, GEN-02
+
+Prompt:
+Explain DTOs simply and write the DTOs for creating/updating hotels, rooms,
+policies and date ranges with class-validator.
+
+How the output was used:
+Created 6 DTOs. Used PartialType/PickType for update forms, ValidateNested +
+@Type for cancellation tiers, ArrayUnique for unique daysBefore, and kept
+server-controlled fields (countryCode, rating, isActive, hotelId) out of the
+DTOs to prevent mass assignment.
+================================================
+
+Date: 2026-11-07
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-04, HTL-06, HTL-15, HTL-18
+
+Prompt:
+Help me agree an interface with the hotel-bookings teammate and write
+checkRoomAvailability(roomId, checkIn, checkOut, session?).
+
+How the output was used:
+Implemented checkRoomAvailability (active room + hotel, every night inside
+an availability range, no blocked overlap, not in getTakenRoomIds),
+findRoomsByIds and updateRating. Used forwardRef for the circular dependency
+between HotelsModule and HotelBookingsModule.
+================================================
+
+Date: 2026-11-09
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-01, HTL-03, HTL-09, HTL-10, GEN-12, GEN-13
+
+Prompt:
+Update my hotels service and controller to use the team's auth skeleton
+(@Public, @Roles, @CurrentUser, AuthUser, Role, City model).
+
+How the output was used:
+Added createHotel, updateHotel, updatePolicies and createRoom with an
+ownership check (admin, or hotel_moderator whose assignedProviderId matches
+the hotel). Wrote the controller routes with @Roles/@Public, and looked up
+countryCode from the seeded City model. Duplicate room numbers return 409.
+================================================
+
+Date: 2026-11-10
+Student: Hana
+Tool: Claude
+Related Requirement: (setup)
+
+Prompt:
+Help me fix "querySrv ECONNREFUSED" when connecting to MongoDB Atlas, and
+the missing JWT_SECRET startup error.
+
+How the output was used:
+Diagnosed a DNS block on SRV lookups on my network; fixed it locally with a
+preload file outside the repo that sets Node's DNS servers. Added JWT_SECRET
+to my local .env. No project files changed.
+================================================
+
+Date: 2026-11-12
+Student: Hana
+Tool: Claude
+Related Requirement: HTL-04, HTL-05, HTL-06, HTL-08
+
+Prompt:
+Explain the overall concept of room edit/deactivate/delete and the room
+availability calendar (open and blocked date ranges, status view), then write
+the code using the hotel-bookings helpers we agreed on and explain what each
+line does. Also give me test data to use in Swagger.
+
+How the output was used:
+Added updateRoom/deleteRoom (with a check that the room belongs to the hotel),
+add/edit/remove for open and blocked ranges with no-overlap rules (atomic
+$elemMatch check), checks against Confirmed and on-hold reservations via
+hasOverlappingReservation / hasConfirmedReservations / wasEverReserved, and a
+per-night status view. Used the test data to test the endpoints and role checks
+in Swagger myself, and rewrote some error messages to be clearer for users.
+================================================
+
+Date: 2026-11-13
+Student: Hana
+Tool: Claude
+Related Requirement: GEN-08, HTL-02, HTL-11, HTL-12, HTL-15, GEN-05
+
+Prompt:
+Give me test steps for my endpoints now that member 6's booking code is
+merged. Then make hotel photos accept only URLs from the uploads module, and
+explain and write the hotel search (filters, sorting, page size 10), the free
+rooms list with total price, and hotel details with dates.
+
+How the output was used:
+Tested blocking, deactivating and deleting a booked room (409) with member 6's
+real bookings. Added the uploads URL check to hotel photos (GEN-08 PR). Added
+searchHotels, getAvailableRooms and getHotelDetails, and ran 17 Swagger tests
+(filters, sorting, blocked nights, all 400 cases) before opening the search PR.
+================================================
+
+Date: 2026-11-01
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18, HTL-20, HTL-21, HTL-23, HTL-24
+Category: Explaining concepts
+Prompt:
+Explain my part of the project (hotel search, hotel booking, reviews) using the
+project description and the Excel requirements sheet: which endpoints I own,
+what each requirement means, and which data and rules I share with member 5.
+How the output was used:
+Used the explanation to understand my requirement IDs, the booking lifecycle
+(Pending Payment, Confirmed, Completed, Expired, Cancelled), the refund-tier
+rule and the review eligibility rule before writing any code.
+================================================
+
+Date: 2026-11-02
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18
+Category: Brainstorming implementation approaches
+Prompt:
+How can concurrent hotel bookings and overlapping multi-room reservations be
+prevented in MongoDB? Compare options and tell me what data member 5 and I
+need to agree on (booking states, date format, function names and signatures).
+How the output was used:
+Chose a room-night collection with a unique (roomId, date) index, written
+inside a Mongo transaction so a multi-room hold is all-or-nothing. Used the
+suggested contract with member 5 (inclusive night ranges, checkOut exclusive,
+helper functions) and the ownership split between our modules.
+================================================
+
+Date: 2026-11-07
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-18, HTL-23
+Category: Reviewing code
+Prompt:
+Review member 5's hotel and room schemas and hotels service against my module:
+do the field names, method signatures, forwardRef setup and availability
+behavior match what my booking service calls?
+How the output was used:
+Found that her availability check passes my transaction session into my
+getTakenRoomIds, and fixed two small mismatches (hotelId comparison and a plain copy of the cancellation tiers). Asked her for the missing export and
+forwardRef in her module.
+================================================
+
+Date: 2026-11-07
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-18
+Category: Debugging
+Prompt:
+Why would a booking fail when member 5's checkRoomAvailability calls my
+getTakenRoomIds inside my transaction? Also helped me read my Swagger 404
+(wrong test ids), the git pull/merge errors, and the build output.
+How the output was used:
+Replaced distinct() with an aggregation, because distinct is not allowed
+inside a MongoDB transaction. Corrected my test ids and fixed my git state
+(stash, aborting the unfinished merge, staging only my own folder).
+================================================
+
+Date: 2026-11-08
+Student: Maya
+Tool: Claude
+Related Requirement: HTL-16, HTL-20, HTL-21, HTL-23, HTL-24
+Category: Refactoring and improving documentation
+Prompt:
+Refactor my module to use member 5's HotelsService instead of my temporary
+adapter, rename my helper methods to match her names (hasOverlappingReservation,
+wasEverReserved, getTakenRoomIds, getBookedNights), add an optional session to
+every helper, and write a step-by-step Swagger test plan with a request body for
+each test, plus the messages and PR description for my teammates.
+How the output was used:
+Applied the refactor after pulling her code and re-ran the whole test plan.
+Used the generated test plan to test every endpoint, and the messages and
+PR text with minor edits.
+================================================
+
+Date: 2026-11-06
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: GEN-01, GEN-05
+Category: Code generation, Debugging
+Prompt:
+List the changes in the updated PDF and requirements sheet that affect my
+part, and help me write the notifications module following GEN-01 and GEN-05.
+Also: why does the Atlas connection fail with querySrv ECONNREFUSED on Windows?
+How the output was used:
+Reviewed the code against GEN-01/GEN-05, tested all endpoints in Swagger with
+valid and invalid ids, removed a duplicate Swagger header found during
+testing, and opened PR #2. Fixed the Atlas error by switching to a standard
+(non-SRV) connection string.
+================================================
+
+Date: 2026-11-09
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: PAY-01, PAY-02, PAY-03
+Category: Brainstorming implementation approaches
+Prompt:
+How can the payments module and the flight/hotel booking modules call each
+other without a circular dependency, as requested in the PR review?
+How the output was used:
+Used the suggested design (injection tokens resolved with ModuleRef) in the
+contract proposal I sent to members 4 and 6 for agreement before
+implementing it.
+================================================
+
+Date: 2026-11-11
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: GEN-01, GEN-13
+Category: Code generation
+Prompt:
+After the PR review, how should the notifications controller use the team's
+new @CurrentUser decorator instead of the temporary x-user-id header?
+How the output was used:
+Reviewed the updated controller, merged develop into my branch, and tested in
+Swagger: 401 when logged out, 200 after login. Coordinated the payments
+contract with member 6.
+================================================
+
+================================================
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-08
+Category: Code generation
+Prompt:
+Wrote the image upload module for GEN-08: a POST /api/uploads/images endpoint with JPG/PNG validation, a real file signature check, random file names, and serving the saved files at /uploads from the uploads module itself.
+How the output was used:
+Used as the base for the uploads module. I reviewed it and tested it in Swagger with a valid PNG (201), a PDF, a text file and a fake PNG (all 400), a logged-out request (401), and opened a saved image by its URL.
+After Copilot's review I added a fields limit, a stricter image structure check, and error handling in the delete helper, and re-tested.
+================================================
+
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-08
+Category: Code generation
+Prompt:
+How to ignore the uploaded images folder in the root .gitignore without also ignoring the backend/src/uploads source folder.
+How the output was used:
+Added /backend/uploads/ to .gitignore and checked with git check-ignore and git ls-files that the images folder is ignored and the source folder is still tracked.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-01, BLG-03, BLG-04
+Category: Code generation
+Prompt:
+Wrote the blog posts module: Post schema, DTOs with validation, service and controller for POST /api/posts, GET /api/posts/mine and PATCH and DELETE /api/posts/:id. Only the author can edit or delete a post (another user's draft gives 404, a published post gives 403), and null values in PATCH are rejected.
+How the output was used:
+Used as the base for the blog module. I reviewed it and tested it in Swagger: creating a draft and a published post (201), listing my posts, editing and publishing a draft (200), a bad image URL and a missing title (400), and deleting a post.
+After Copilot's review I made publishedAt atomic, rejected out-of-range pages, matched the schema length checks to the DTO, and added _id to the sort index, and re-tested.
+I also replaced the copied image URL pattern with the shared one from the uploads module.
+================================================
+
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-05, BLG-06, BLG-07
+Category: Code generation
+Prompt:
+Wrote the comments and likes parts of the blog module: Comment and Like schemas, DTOs, services and controllers for POST /api/posts/:id/comments, PATCH and DELETE /api/comments/:id, and POST and DELETE /api/posts/:id/like. Comments are allowed only on published posts, are 1 to 500 characters, and only the author can edit or delete them. A user can like a post once (enforced by a unique index), and can remove the like. The comment and like counts on the post are kept in sync, and deleting a post deletes its comments and likes.
+How the output was used:
+Used as the base for the comments and likes module. I reviewed it and tested it in Swagger: commenting on a published post (201), empty, whitespace-only, 501-character and extra-field requests (400), a draft (404), editing and deleting my comment, liking once (201) and again (409), unliking, the counts on my posts list, and deleting a post with comments and likes.
+After Copilot's review I put comment and like changes and post deletion in database transactions, and re-tested.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-02
+Category: Code generation
+Prompt:
+Write the public blog reads: a paginated list of published posts (10 per page) and the post page with title, author, date, body, tags, images, like count and comments, readable by guests.
+How the output was used:
+Added PublicBlogService, PublicBlogController and the query DTOs. Drafts are only visible to their author (404 for everyone else), and posts of a deactivated user are hidden. Authors are shown by name only. I reviewed the code and tested in Swagger: the plain list (newest first, drafts left out), the post page with comments and likedByMe, a draft as another user (404), my own draft (200), and GET /posts/mine still working. A TS4053 build error (PostListItem not exported) was fixed by exporting the type.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-08
+Category: Code generation
+Prompt:
+Add tag pages: GET /api/tags/:tag/posts returns the published posts that carry a tag.
+How the output was used:
+The tag route reuses the same list query as BLG-02 and adds the tag to the response. I reviewed the code and tested the tag filter on the list and the tag route in Swagger (the draft with the same tag is correctly left out).
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-09
+Category: Code generation
+Prompt:
+Add keyword search over title, tags and author name, ordered by likes plus comments (highest first) and newest first on ties, with a "No results" response.
+How the output was used:
+The search words are matched literally (special characters are escaped) and the list is sorted by likes plus comments. I reviewed the code and tested in Swagger: a keyword match, the ordering with a liked and commented post, and a keyword with no match (empty items with message "No results").
+================================================
+
+Date: 2026-11-11
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Code generation
+Prompt:
+Wrote the itinerary schema, DTOs, service and controller for ITN-01 in NestJS, following the existing auth and reference-data code style.
+How the output was used:
+Used as the base for the itineraries module. I reviewed it and tested all endpoints in Swagger.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-01, ITN-03
+Category: Debugging
+Prompt:
+How to address the PR review: fixed page size of 10, days placeholder in the list, 404 for other users' private itineraries, resolving the AI_PROMPTS.txt merge conflict, and a seeded country code in the Swagger example.
+How the output was used:
+Applied the changes in the itineraries module, kept all existing entries in AI_PROMPTS.txt, and re-tested in Swagger.
+================================================
+
+Date: 2026-11-13
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-03
+Category: Debugging
+Prompt:
+How to fix the review point that the page parameter is unbounded, and how to merge develop and resolve the AI_PROMPTS.txt conflict.
+How the output was used:
+Added a maximum to the page parameter in the list query DTO and merged develop, keeping every existing entry.
+================================================
+Date: 2026-11-14
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-05, ITN-07, ITN-08, ITN-09
+Category: Code generation, Debugging
+Prompt:
+Add days to the itinerary: add/edit/delete/reorder with a 60-day limit, every day needs a seeded city, day numbers and dates derived from the start date, and consecutive same-city days grouped.
+How the output was used:
+Days are embedded in the itinerary document. Each change is a single atomic update ($push with a size guard, positional $set, $pull, and an aggregation-pipeline update for reorder), so concurrent requests cannot break the 60-day limit or lose a day. Day numbers, dates and city groups are computed when reading, so nothing needs renumbering. I reviewed the code and tested every route in Swagger.
+Reorder first failed with a 500 because Mongoose needs the updatePipeline option for pipeline-style updates; fixed by setting updatePipeline: true.
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-10
+Category: Code generation
+Prompt:
+Add activities to an itinerary day: name and description required, optional time (HH:mm) and cost with currency, sorted by time with the no-time ones last.
+How the output was used:
+Activities are stored in their own collection and shown under each day when the itinerary is read. Add, edit and delete are owner-only; other users get 404 on a private itinerary and 403 on a public one. I reviewed the code and tested in Swagger: create with and without time and cost (201), cost without currency (400), currency without cost (400), unknown currency (400), bad time (400), PATCH with cost null (clears cost and currency), and PATCH with name null (400).
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-16
+Category: Code generation
+Prompt:
+Add intercity transport costs to a day: mode, from city, to city, amount and currency.
+How the output was used:
+Transport costs are stored in their own collection and shown under their day, and counted as intercity_transport in the budget summary. The requirements sheet does not define transport modes, so I used flight, train, bus, car, ferry and other. I reviewed the code and tested create, edit and delete in Swagger.
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-14, ITN-09
+Category: Code generation
+Prompt:
+Add budget entries per day with a category, amount and currency, a budget summary, and budget subtotals on the city groups.
+How the output was used:
+Different currencies are not added together until ITN-18 converts them, so the summary totals and the city group subtotals are maps per currency. Negative amounts and unknown categories are rejected (400). The summary gives totals by category and per day. I reviewed the code and tested create, edit, delete, the itinerary view with subtotals, the summary, deleting a day (its items go with it), and the 404/403 rules for a second user in Swagger.
+================================================
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-18
+Category: Code generation
+Prompt:
+Convert all itinerary budget amounts to the user's preferred currency using exchange rates from FXRatesAPI, fetched once per day and cached in the database, with the rate date shown and the last cached rates used if the API is unavailable.
+How the output was used:
+Rates are fetched by the NestJS backend and stored as one document per day in an exchange_rates collection. The API key is read from the backend .env only (the empty name FXRATES_API_KEY= was added to .env.example). The budget summary and the city group subtotals are converted to the user's preferredCurrency and return the rate date, a ratesStale flag and the original amounts per currency. I reviewed the code and tested in Swagger: the converted summary in EGP with the rate date, a second call that used the cached rates with an empty API key (no API call needed), the itinerary view with convertedSubtotal and the rate date, and the summary in USD (no conversion).
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-20
+Category: Code generation
+Prompt:
+Let the owner set an itinerary to Public or Private, so that public itineraries are read-only to other users and setting Private removes them immediately.
+How the output was used:
+Visibility is changed through PATCH /api/itineraries/:id. I reviewed the code and tested in Swagger: setting the itinerary to public (200), an invalid visibility value (400) and a null visibility (400).
+================================================
+
+Date: 2026-11-15
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: GEN-10
+Category: Code generation
+Prompt:
+Add an isHidden flag to itineraries so that hidden content is visible only to its author and admins.
+How the output was used:
+Added an isHidden field (default false) to the itinerary schema, to be agreed with Mariam as the field name. I reviewed the code and checked in Swagger that a new itinerary is created with isHidden set to false.
+================================================
+Date: 2026-11-15
+Student: Habiba Ahmed
+Tool: Claude
+Related Requirement: PAY-01 to PAY-04
+Category: Code generation, Testing
+Prompt:
+Help me write the payments module.
+How the output was used:
+Reviewed it and tested the full flow with the Stripe CLI: booking, payment,
+webhook [200], booking Confirmed, then cancel and full refund.
+
+================================================
+Date: 2026-11-15
+Student: Habiba
+Tool: Claude
+Related Requirement: ITN-21
+Prompt:
+Write public itinerary search (keyword on title, country or city, duration and country/city filters), a read-only public view, and a clone endpoint that copies days, activities, budgets and transport costs into a private copy crediting the original author. I pasted my itineraries service, view helpers, schemas, User and City schemas, and a 500 error from the search.
+How the output was used:
+Used the generated DTO, service and controller, added clonedFrom to the itinerary schema, registered the new controller before the :id routes. Fixed the 500 (older itineraries without a days array) with $ifNull. Tested search, filters, public view and clone in Swagger with two users.
+================================================
+
+Date: 2026-11-13
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-13, ACC-07a, GEN-07, GEN-13
+Category: Code generation
+Prompt:
+How should I implement the admin endpoint that creates a hotel moderator with
+a temporary password, links the moderator to one hotel, and writes an audit log
+entry, while the airline side is still blocked on FLT-01?
+
+How the output was used:
+Added POST /api/admin/moderators with a validated DTO, a bcrypt-hashed
+temporary password, mustChangePassword = true, assignedProviderId set to the
+hotel id, a duplicate-email check, an audit log entry, and Swagger
+documentation. The airline branch is deliberately rejected until the Airline
+schema is merged. Reviewed the diff and tested the endpoint in Swagger.
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-01
+Category: Code generation
+Prompt:
+Asked Claude for assistance NestJS airline schema.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-08, FLT-09
+Prompt:
+Asked Claude for the baggage-policy and cancellation-tier endpoints and the refund helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-03 to FLT-06, FLT-30
+Prompt:
+Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+
+================================================
+Date: 2026-11-17
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-25
+
+Prompt:
+How can an itinerary return hotels for each city group, reusing the existing HTL-11 hotel search? I pasted hotels.service.ts, hotels.controller.ts and the search DTO.
+
+How the output was used:
+Used the new files itinerary-hotels.service.ts, itinerary-hotels.controller.ts and itinerary-hotels-query.dto.ts, plus the module wiring, for GET /api/itineraries/:id/hotels. Each city group searches its city from the group's start date to the day after its last day. I reviewed the code, fixed a typo in itineraries.module.ts, and ran type checks. Tested in Swagger: 200 with one Cairo group and 2 hotels matching /api/hotels/search; 400 when rooms > guests; 400 when minPrice > maxPrice; 400 for an invalid itinerary id.
+================================================
+
+Date: 2026-11-16
+Student: Habiba
+Tool: Claude
+Related Requirement: GEN-10
+Prompt:
+Add an isHidden flag to posts and comments so hidden content is visible only to its author and admins. I pasted my blog schemas and services.
+How the output was used:
+Added isHidden to the post and comment schemas, filtered hidden posts and comments out of the public list, tag pages, search and comment list, blocked comments on hidden posts, and tested normal posts and comments in Swagger.
+
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-12, ACC-12
+Category: Code generation
+Prompt:
+Add the public author page GET /api/authors/:id with the author's name, join date, published posts and public itineraries, and hide deactivated users.
+How the output was used:
+Added an authors controller and service in the blog module. The page is open to guests, lists only published, non-hidden posts and public, non-hidden itineraries (10 per page each, with separate page parameters), and returns 404 for unknown, staff or deactivated accounts. Deactivated users' posts and comments were already handled in the public blog service. I reviewed the code and tested in Swagger: the author page as a guest (200), a draft post not listed, a private itinerary not listed, a published post listed, an invalid id (400), an unknown id (404) and an empty second page.
+================================================
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: ITN-12
+Category: Code generation
+Prompt:
+Let a user attach up to 5 images to an activity and remove them, using the shared upload rule (GEN-08), and delete the image files when the activity is deleted.
+How the output was used:
+Added POST and DELETE /api/activities/:id/images with an image interceptor and a service that adds and removes the URL in one atomic update (so two uploads at once cannot go over 5), and deletes the file only when no other activity or post still uses it. I reviewed the code and tested in Swagger: a PNG upload (201 with imageId, url and images), a text file (400), deleting an image (200, and the file was gone from backend/uploads). A typo in an edit instruction ("add images:" in plan-items.ts) caused a build error that I fixed.
+================================================
+
+Date: 2026-11-16
+Student: Habiba Khaled
+Tool: Claude
+Related Requirement: BLG-10
+Category: Code generation
+Prompt:
+Let an author attach up to 5 images to a post and remove them, using the shared upload rule (GEN-08), and delete the image files when the post is deleted.
+How the output was used:
+Added POST and DELETE /api/posts/:id/images with the same image service pattern as the activities. Only the author can change a post's images. I reviewed the code and tested in Swagger: uploading a PNG to my own post (201).
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-17
+Category: Requirements analysis
+Prompt:
+I'm member 3 (flight search, filters, sorting, airports). I only want you
+to read the zip file and the project description. [Later: link to the
+requirements Excel sheet, "I didn't find FLT-13, 14, 16 or 18".]
+How the output was used:
+Claude summarized my module's scope and the rules in the requirements sheet
+(passenger types, infant fare, price filter, sorting, local airport time).
+I checked it against the Excel sheet [and the project PDF]. Found that
+FLT-13, 14, 16 and 18 don't exist in the sheet.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02 (not mine), FLT-11
+Category: Process / debugging
+Prompt:
+Where do I begin? And how should I approach this project? [Pasted Mariam's review
+comments on Malk's FLT-02 PR.]
+How the output was used:
+Claude explained the branch and commit workflow. After the review on Malk's
+PR, I realised FLT-02 belongs to her and moved to
+feature/FLT-11-flight-search. I applied the review lessons (DTO validation,
+@Public) to my own DTO.
+================================================
+================================================
+Date: 2026-11-12
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"Could you help me make the search query DTO and helper
+functions with their tests?"
+How the output was used:
+Claude generated search-flights-query.dto.ts, search.constants.ts,
+search.utils.ts and search.utils.spec.ts (local date to UTC range,
+passenger rules, price check, sorting). [I read through each function and
+can explain it.] [I ran tsc/lint/jest on my machine.]
+================================================
+================================================
+Date: 2026-11-13
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+"I want to create placeholders while member 2 and member 4's work haven't
+been done yet"
+How the output was used:
+Claude generated search.placeholders.ts: a SearchableFlight interface that
+stands in for member 2's Flight schema, and a getHeldSeats() stub that
+returns 0 until member 4's holds exist. Both are temporary and will be
+replaced when their work is merged into develop. [I reviewed the file and
+the type-check passes on my machine: yes]
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, GEN-06
+Category: Code generation, Testing
+Prompt:
+Write the search rules (price, seats, sorting, paging),
+the search DTOs, local airport time helper and their unit tests, using Malk's flight,
+cabin and airline schemas.
+How the output was used:
+The search DTO rejects unknown and repeated parameters, 
+malformed airport codes and impossible dates, and the rules that compare fields are in a separate helper. 
+Local airport times use the built-in Intl time zone support, so no new package was added. 
+A temporary placeholder file stood in for the flight schema until it was merged. I reviewed the code and ran the unit tests.
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-15, GEN-05
+Category: Code generation
+Prompt:
+Apply the review comments on my pull request: 
+a fixed page size of 10 with no limit parameter, reject past departure dates, 
+and use the chosen cabin (or else the cheapest cabin with enough seats) for the price filter and sort.
+How the output was used:
+Removed the limit parameter and MAX_PAGE_SIZE, so ?limit= is now rejected (400). 
+The past-date check compares the departure date with today's date in the departure airport's time zone. 
+The price filter and sort use the per-person fare and each cabin shows the party total separately. 
+I reviewed the code and tested using Swagger.
+================================================
+================================================
+Date: 2026-11-15
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15, FLT-30
+Category: Code generation, Testing
+Prompt:
+Replace my placeholders with the real flight, cabin and airline schemas, and write the search service and unit tests: only Scheduled flights, the local departure date from departureLocalDate, held and booked seats, deactivated airlines hidden, unknown airports and past dates rejected (400), and the return leg for round trips.
+How the output was used:
+The search rules are in one function without database access, covered by unit tests, and the database queries are in FlightSearchService. Malk's CabinClass enum is reused. Flights that already departed are not shown, which is an addition to the requirements. I fixed a missing-file import error in my own folder. I reviewed the code [and ran the unit tests: result].
+================================================
+================================================
+Date: 2026-11-16
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-15
+Category: Code generation
+Prompt:
+Write the public GET /api/flights/search controller 
+and a search module that imports the flights and airlines modules, 
+without editing Malk's module.
+How the output was used:
+The controller is public so guests can search. 
+FlightSearchModule is registered with one line in app.module.ts. I reviewed the code and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-16
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-13, GEN-07, GEN-13
+Category: Code generation
+Prompt:
+Extend the ACC-13 moderator creation endpoint so it supports both hotel and airline providers now that the Airline schema is merged.
+How the output was used:
+Added an admin-only airline lookup that includes deactivated airlines, reused the existing temporary-password and duplicate-email flow, set role airline_moderator and assignedProviderId to the airline id, generalized the audit entry providerType, and updated the Swagger descriptions. Build and lint pass; the hotel path remains unchanged.
+================================================
+================================================
+Date: 2026-11-01
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Milestone 1 setup (README, project structure)
+Prompt:
+Guide me, as team leader, through the repository setup: the NestJS backend, the MongoDB Atlas connection with MONGODB_URI in .env, a global ValidationPipe, Swagger at /api/docs, a global exception filter, the 13 empty feature modules, the root README with the setup steps and Git workflow, and branch protection rules for develop and main.
+How the output was used:
+I followed the steps and committed them as the scaffold, database connection, core skeleton and README commits (95e86e1, 738c3f2, 8b0b726, 908f147). Claude's output was reviewed again later in the code review on 2026-11-07.
+================================================
+================================================
+Date: 2026-11-05
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-01, GEN-13
+Prompt:
+Implement user registration for the backend: a user schema, a register DTO that enforces the password rule (8+ characters, a letter and a digit), mandatory consent and a valid unique email, and a register endpoint that stores only a salted password hash.
+How the output was used:
+I used the generated user schema, register DTO and auth service as the base for the ACC-01 commit (a308b71), and checked the behavior in Swagger on 2026-11-07 (duplicate email, invalid email, weak password, missing consent, role injection).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-04, ACC-05, ACC-19
+Prompt:
+Review all my auth, users and common code against the requirement sheet and the project description. Say what to fix, add or remove, and do not assume anything about my files.
+How the output was used:
+Claude reviewed the login with lockout (5 failed attempts, 15 minutes) and the httpOnly access and refresh cookies that were written with Claude's help in the earlier conversation. I ran 11 tests in Swagger and Atlas (wrong password, unknown email, suspended account, lockout, cookies) and committed the login work (ad34974).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Core error handling (no requirement ID)
+Prompt:
+Same code review as above.
+How the output was used:
+Claude pointed out that the global exception filter returned "Internal server error" for unexpected errors without logging them. I replaced the file with a version that logs unexpected errors using the Nest Logger (commit 0018fc8).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Milestone 1 deliverable: README with setup instructions
+Prompt:
+Same code review as above.
+How the output was used:
+Claude noticed that the README did not mention JWT_SECRET, although the backend refuses to start without it. I replaced step 3 of the backend setup with the new text, including the command that generates a secret (commit 9332cb4).
+================================================
+================================================
+Date: 2026-11-07
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: Repository setup (no requirement ID)
+Prompt:
+Same code review as above.
+How the output was used:
+Claude found that .gitignore had two patterns joined on one line (.DS_Store*.tsbuildinfo). I replaced it with two separate lines (commit 8e35044).
+================================================
+================================================
+Date: 2026-11-08
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: GEN-12
+Prompt:
+Seed the reference data (countries, cities, airports, attractions) from the official CSV files. I provided screenshots of the four sheets and asked Claude to check everything against the project description and not to assume anything.
+How the output was used:
+Claude provided a CSV parser, four schemas, a seeder that upserts by key at startup, and a service that exposes the supported currencies. Claude compiled and ran it in a test project with my package versions before I used it. I ran it against Atlas (8 documents in each collection, no duplicates after a restart) and committed it (5ce1c5e). While checking Atlas I found that the airports collection had already been filled by another team member's script. That team member's pull request has not been merged; I requested changes in its review (see the airports review entry of 2026-11-10).
+================================================
+================================================
+Date: 2026-11-09
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-06, ACC-19, GEN-13
+Prompt:
+Build what my teammates asked me for: @Public(), @Roles() and @CurrentUser(), global guards (login required by default, 30 minutes of inactivity, suspended accounts, temporary password), GET /api/auth/me and POST /api/auth/logout that revokes the refresh token on the server.
+How the output was used:
+Claude wrote the decorators, the AuthUser type, the two global guards and the new endpoints, and tested them with a simulated user store (16 checks) before I used them. I fixed one mistake of mine (the controller code went into app.controller.ts first), then ran 10 tests in Swagger and Atlas (not logged in, session expiry, suspension, logout and revocation) and committed it (c6a33e2).
+================================================
+================================================
+Date: 2026-11-09
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: PAY-01, PAY-02, PAY-03, PAY-04
+Prompt:
+Review a teammate's pull request (payment, refund and policy acceptance schemas) from its diff file against the requirement sheet and the project rules. I asked Claude not to assume anything and to tell me which files it needed.
+How the output was used:
+Claude checked the schemas against PAY-01 to PAY-04 and the contract file for the booking modules. I merged pull request #6 (merge commit b88713b) and left a review comment with follow-up items for the author: one platform currency constant, Stripe amounts as integer cents, a unique index on refunds, and injection tokens for the booking contract.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: ACC-06, ACC-19
+Prompt:
+Build POST /api/auth/refresh for my NestJS auth module: verify the refresh token cookie, rotate it, enforce the 30 minute inactivity rule, reject suspended and deactivated accounts, and test it. After Claude used stand-in files in its first test, I told it not to assume anything about my files and to ask me for the real ones.
+How the output was used:
+Claude wrote the refresh method and route in auth.service.ts, auth.controller.ts and users.service.ts, then compiled them and ran 12 checks with my real files and an in-memory user store (rotation, reuse of the old token, two parallel requests, 30 minutes of inactivity, suspended and deactivated accounts, a temporary-password account, logout). I ran 8 tests in Swagger and Atlas and committed it (ab82ef8); it was merged as pull request #8.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: FLT-02
+Prompt:
+Review a teammate's airports pull request (FLT-02) from its diff file against the requirement sheet, my reference-data module and the project rules, and do not assume anything.
+How the output was used:
+Claude found a duplicate Airport schema and a seed script (the reference-data module already seeds the airports), a missing @Public() so guests got 401, unvalidated page and limit (a negative limit produced a negative skip), and unvalidated query parameters. I posted the review comment Claude wrote with a Request changes review on pull request #1. It is not merged yet.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: GEN-01, ACC-11, GEN-13
+Prompt:
+Review a teammate's in-app notifications pull request (GEN-01) from its diff file against the requirement sheet and the project rules.
+How the output was used:
+Claude found that every notification route read the user id from an x-user-id request header, so any logged-in user could read another user's notifications. I requested changes on pull request #2 using the review comment Claude wrote, which includes a corrected controller that uses @CurrentUser('id'). It is not merged yet.
+================================================
+================================================
+Date: 2026-11-10
+Student: Mariam
+Tool: Claude (claude.ai)
+Related Requirement: HTL-16, HTL-18, HTL-21, HTL-22, HTL-23, HTL-24
+Prompt:
+Review a teammate's hotel booking pull request from its diff file against the requirement sheet and the project rules.
+How the output was used:
+Claude listed what must be fixed before it can be merged: empty HotelsService and HotelsController stubs that would stop develop from compiling, user ids read from an x-user-id header, no role or ownership check on the hotel reservations route (HTL-22), and a missing @Public() on the hotel reviews route (HTL-24). It is not merged.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02, GEN-05
+Category: Code generation
+Prompt:
+Write the query DTO and service for a public, read-only airports list (FLT-02):
+filters q (name or IATA code), countryCode and cityId, a page parameter, fixed
+page size 10 with no limit parameter, rejecting unknown and repeated params,
+reusing the existing Airport model from reference-data, plus a getByCodes
+method that flight search can use.
+How the output was used:
+The controller is public so guests can search. 
+The service reads the existing Airport model from reference-data 
+(no new schema or seeder) and has a fixed page size of 10. 
+Unknown and repeated query parameters are rejected (400). I reviewed the code and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-02
+Category: Code generation
+Prompt:
+Could you help me write the public GET /api/airports controller (FLT-02) with Swagger
+decorators?
+How the output was used:
+The controller is public and read-only, so guests can list airports before searching.
+I reviewed the code and tested in Swagger without logging in:
+GET /api/airports (200), ?countryCode=EG, ?q=dubai, ?page=2, and 400 for ?page=0 and ?countryCode=EGY.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-17, GEN-06
+Category: Code generation
+Prompt:
+For FLT-17, could you tell me how to write the flight details response DTO and a pure function that
+builds the details page data (local airport times, every cabin with price,
+seats remaining and free baggage, extra baggage rules and the airline
+cancellation policy), with unit tests?
+How the output was used:
+The details rules are in one function that is unit tested, 
+so they can be checked without a database. Cabins are listed from Economy to First, 
+seats remaining are total minus booked minus held (never negative), 
+and the cancellation tiers are shown earliest first. 
+I reviewed the code and tested using Swagger.
+================================================
+================================================
+Date: 2026-11-17
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-17
+Category: Code generation
+Prompt:
+I want to wire up FLT-17: a getDetails method in my search service that uses the details
+builder, and a public GET :id route in my controller with Swagger decorators.
+Could you also explain why the route has to be declared after search?
+How the output was used:
+GET /api/flights/:id is public and returns the flight, its cabins, 
+baggage and cancellation policy. A malformed id returns 400 and an unknown id returns 404. 
+The route is declared after /flights/search so that search is not read as an id. 
+I reviewed the code and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-18
+Student: Adala
+Tool: Claude
+Related Requirement: FLT-19, FLT-21, FLT-22, FLT-23, FLT-25, FLT-26, FLT-29
+Prompt:
+How do I build the flight booking module (schema, atomic seat hold, expiry timer, payment port, cancel with refund, e-ticket PDF, passenger CSV) following the hotel-bookings pattern and the payments contract?
+How the output was used:
+Used the explanations and code as a base for the schema, service, controllers and the FLIGHT_BOOKING_PORT, then reviewed it, fixed compile errors and tested it in Swagger.
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-12, FLT-22
+Category: Debugging, Testing
+Prompt:
+Review Adala's flight-bookings PR before merge, especially passenger pricing and seat inventory, and fix any mismatch with the requirements.
+How the output was used:
+Found that infants were being charged a full fare and occupying a seat. Updated the booking summary and hold logic so adults and children pay the full fare, infants pay 10%, and only adults/children reserve seats. Verified with the shared test flight: one adult plus one infant produced a total of 275, held exactly one seat, FLT-29 returned the flight bookings/CSV, and the e-ticket endpoint returned a valid PDF. Test data was cleaned up afterwards.
+================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-03 to FLT-06, FLT-30
+Prompt:
+Asked Claude to check the flight and cabin schemas, DTOs, service, controller and time-zone helper.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-15
+Student: Malk Okasha
+Tool: Claude
+Related Requirement: FLT-30
+Prompt:
+Asked Claude for a background job that marks flights Departed after their departure time.
+How the output was used:
+Starting point for my module; reviewed against the requirements sheet and tested in Swagger.
+================================================
+================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: GEN-09, GEN-10, GEN-07
+Category: Code generation
+Prompt:
+Implement user content reporting and the admin moderation endpoints for reports and direct content hide/delete across posts, comments, reviews and itineraries.
+How the output was used:
+Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-26
+Category: Code generation
+Prompt:
+Implement ITN-26 itinerary flight search, completing the part Habiba Khaled could not finish.
+How the output was used:
+Added GET /api/itineraries/:id/flights for the itinerary owner. It finds the first day's city and its airport, uses the itinerary start date as the outbound date, optionally uses the last day as the default return date, and reuses FlightSearchService with passenger/cabin/price/sort/page filters. Tested with a Dubai itinerary: one-way from CAI returned the MS777 flight, and round-trip used 2026-12-20 as the default return date. Test data was removed; build, lint and startup pass.
+================================================
+================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01, GEN-07
+Category: Code generation
+Prompt:
+Implement the admin provider deactivation endpoints for hotel and airline providers, including hiding them from search, keeping existing confirmed bookings valid, notifying affected users and writing an audit log entry.
+How the output was used:
+Added PATCH /api/admin/providers/:type/:id/deactivate and reactivate, wired HotelsService.setHotelActive and AirlinesService.setActive, added provider-type parameter validation, notified provider moderators plus users with confirmed hotel bookings, recorded DEACTIVATE_PROVIDER/REACTIVATE_PROVIDER in the audit log, and returned the affected-user count. Build and lint pass. Airline passenger notifications remain pending because the flight-bookings module does not exist yet.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01
+Category: Code generation, Testing
+Prompt:
+Complete the airline side of provider deactivation now that flight bookings exists, so passengers with Confirmed bookings are notified too.
+How the output was used:
+Added getUserIdsWithConfirmedBookingsForAirline to FlightBookingsService and used it in AdminProvidersService alongside hotel guests. Tested PATCH deactivate/reactivate for the EgyptAir test provider as admin: both returned 200 and the airline was restored to active. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15
+Category: Debugging, Testing
+Prompt:
+Address Hana's review of provider deactivation: reject deactivating an already-deactivated provider and reactivating an already-active one, so notifications and audit entries are not duplicated.
+How the output was used:
+Loaded the current provider before updating and returned 409 when the requested state already matched. Tested as admin on EgyptAir: deactivate 200, second deactivate 409, reactivate 200, second reactivate 409; airline restored active. Application startup, build and lint pass.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Code generation
+Prompt:
+Implement account self-deactivation with upcoming booking checks, cookie clearing and hiding the deactivated user's public itineraries.
+How the output was used:
+Added DELETE /api/users/me, checked both hotel and flight bookings for upcoming Confirmed reservations, set the account to Deactivated and cleared its session cookies, and excluded deactivated owners from public itinerary search/view/clone. Tested in Swagger: deactivation returned 200 and cleared cookies; the next login returned 403; test data was removed.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: block deactivation while an active Pending Payment hold exists, and make reviews of deactivated users show as "Deleted user".
+How the output was used:
+Added hasActiveHold to both booking services, included it in the deactivation check, and added reviewer names/status to the public review list. Tested with a future flight hold: DELETE /api/users/me returned 409; after removing the hold it returned 200. Application startup and build/lint pass. Test data was removed.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Code generation
+Prompt:
+Implement the admin bookings list combining flight and hotel bookings, with type/status/date filters and correct pagination.
+How the output was used:
+Added GET /api/admin/bookings, a shared query DTO, and AdminBookingsService. The service fetches the newest rows from the hotel and flight admin lists, merges and sorts by createdAt, then paginates the combined list. I added an optional limit to the hotel admin list for merged pagination. Tested as admin: type=all, type=hotel, and type=flight&status=Confirmed all returned valid responses. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: add travel-date filtering in addition to createdAt, and verify that type=all accepts Completed, Expired and Cancelled on both hotel and flight sides.
+How the output was used:
+Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: HTL-26
+Category: Code generation
+Prompt:
+Add the hotel moderator review reply bonus.
+How the output was used:
+Added optional reply/repliedAt fields to reviews, a validated PATCH /api/reviews/:id/reply endpoint for hotel moderators, and an ownership check against assignedProviderId. Tested with a real review and hotel moderator: reply returned 200 with the reply and timestamp. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BLG-13
+Category: Code generation
+Prompt:
+Implement the bonus that lets a post author attach one of their itineraries.
+How the output was used:
+Added an optional itineraryId to posts and DTOs, validated ownership in create/update, and exposed it on the public post page. Tested: created an itinerary and a published post with that itinerary; the public post returned the matching itineraryId. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-28
+Category: Code generation
+Prompt:
+Implement PDF export for the owner's itinerary.
+How the output was used:
+Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-01
+Category: Code generation
+Prompt:
+Implement the admin analytics bonus: confirmed bookings and revenue per provider over a selected period.
+How the output was used:
+Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Code generation
+Prompt:
+Implement the favourites bonus for active hotels and public itineraries.
+How the output was used:
+Added the favourites module, unique (userId,type,targetId) schema, POST/GET/DELETE endpoints, target validation and labels in the list. Tested add/list/delete for an active hotel; build and lint pass. Test user/favourite cleaned up.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: paginate GET /api/favorites with GEN-05 page size 10.
+How the output was used:
+Added page query validation, skip/limit, total/page/limit/totalPages while keeping labels for the current page. Tested page=1 on an empty list: returned total 0, page 1, limit 10, totalPages 0. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19, FLT-12
+Category: Debugging, Testing
+Prompt:
+Fix the remaining FLT-19 passenger validation gap by checking that each passenger's declared type matches their age at departure.
+How the output was used:
+Added infant (<2), child (2-11) and adult (12+) validation based on date of birth at the outbound departure time. Tested via the booking summary: an adult type with a 6-year-old date of birth returned 400; a correct child returned 200; a correct infant returned 200. Test user removed; build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Hana's final FLT-19 edge cases: reject a negative age and confirm invalid dates are rejected.
+How the output was used:
+Added Number.isFinite(age) and age < 0 guards before type matching. Confirmed the DTO already rejects invalid dates via IsDateString. Tested: DOB after departure returned 400 with a clear message; DOB "not-a-date" returned 400 from DTO validation. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Maya's confirmed gap: reject future dates of birth and impossible calendar dates that JavaScript would otherwise roll over.
+How the output was used:
+Added an explicit DOB validity check before age matching: the date must parse to the same YYYY-MM-DD and must not be after departure. Tested the exact future-infant request (2030-01-01): returned 400. Tested 2026-02-31: returned 400. Build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: reject any future date of birth, including one before departure.
+How the output was used:
+Changed the DOB guard from comparing with departure time to comparing with the current date. Tested the exact case (DOB 2026-12-01, infant, departure 2026-12-20): returned 400. A valid 2026-01-01 infant still returned 201. Build/lint pass.
+================================================
