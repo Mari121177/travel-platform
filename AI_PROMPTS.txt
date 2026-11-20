@@ -1056,3 +1056,13 @@ Address Hana's review: add travel-date filtering in addition to createdAt, and v
 How the output was used:
 Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
 ================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-28
+Category: Code generation
+Prompt:
+Implement PDF export for the owner's itinerary.
+How the output was used:
+Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
+================================================
