@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsISO8601, IsNumber, IsOptional, Matches, Max, Min} from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 import { CABIN_CLASSES, SORT_FIELDS, SORT_ORDERS } from '../search.constants';
 import type { CabinClass, SortField, SortOrder } from '../search.constants';
 
@@ -108,11 +117,11 @@ export class SearchFlightsQueryDto {
   order: SortOrder = 'asc';
 
   // GEN-05: the page size is fixed at 10 (PAGE_SIZE), so there is no limit param
-    @ApiPropertyOptional({ default: 1 })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    @Max(100000)
-    page: number = 1;
-  }
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  page: number = 1;
+}

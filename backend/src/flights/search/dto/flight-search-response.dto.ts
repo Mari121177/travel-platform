@@ -80,7 +80,7 @@ export class FlightSearchResultDto {
   @ApiProperty({ example: 210, description: 'Duration in minutes' })
   durationMinutes!: number;
 
-    @ApiProperty({
+  @ApiProperty({
     example: 250,
     description:
       'Per-person fare used by the price filter and price sort: the chosen cabin, or the cheapest cabin with enough seats for the party',
@@ -119,4 +119,7 @@ export class SearchFlightsResponseDto {
 
   @ApiPropertyOptional({ type: () => FlightSearchPageDto })
   return?: FlightSearchPageDto;
+
+  @ApiPropertyOptional({ example: 'No flights found' })
+  message?: string;
 }

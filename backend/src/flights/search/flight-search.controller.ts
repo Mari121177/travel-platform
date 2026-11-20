@@ -32,7 +32,7 @@ export class FlightSearchController {
   search(@Query() query: SearchFlightsQueryDto) {
     return this.service.search(query);
   }
-    // Declared after 'search' so that /flights/search is never read as an id
+  // Declared after 'search' so that /flights/search is never read as an id
   @Get(':id')
   @ApiOperation({
     summary:

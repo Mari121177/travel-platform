@@ -174,3 +174,15 @@ export function isPastLocalDate(
 ): boolean {
   return date < todayInTimeZone(timeZone, now);
 }
+
+// FLT-11: message shown when a search finds nothing. For a round trip the
+// outbound leg is checked first, then the return leg. Undefined when both
+// legs have results.
+export function noFlightsMessage(
+  outboundTotal: number,
+  returnTotal?: number,
+): string | undefined {
+  if (outboundTotal === 0) return 'No flights found';
+  if (returnTotal === 0) return 'No flights found for the return leg';
+  return undefined;
+}
