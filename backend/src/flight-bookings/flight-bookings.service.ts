@@ -853,7 +853,7 @@ export class FlightBookingsService
       if (
         Number.isNaN(dob.getTime()) ||
         dob.toISOString().slice(0, 10) !== dobText ||
-        dob > out.flight.departureTime
+        dob > new Date()
       ) {
         throw new BadRequestException(
           `Passenger ${i + 1} has an invalid date of birth`,

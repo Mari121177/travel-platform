@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AirlinesModule } from '../airlines/airlines.module';
+import { FlightBooking, FlightBookingSchema } from '../flight-bookings/schemas/flight-booking.schema';
+import { HotelBooking, HotelBookingSchema } from '../hotel-bookings/schemas/hotel-booking.schema';
 import { HotelsModule } from '../hotels/hotels.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { AdminAccountsController } from './admin-accounts.controller';
+import { AdminAnalyticsController } from './admin-analytics.controller';
+import { AdminAnalyticsService } from './admin-analytics.service';
 import { AdminAccountsService } from './admin-accounts.service';
 import { AdminBookingsController } from './admin-bookings.controller';
 import { AdminBookingsService } from './admin-bookings.service';
@@ -22,16 +26,22 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
     NotificationsModule,
     HotelsModule,
     AirlinesModule,
-    MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
+    MongooseModule.forFeature([
+      { name: AuditLog.name, schema: AuditLogSchema },
+      { name: HotelBooking.name, schema: HotelBookingSchema },
+      { name: FlightBooking.name, schema: FlightBookingSchema },
+    ]),
   ],
   controllers: [
     AdminAccountsController,
+    AdminAnalyticsController,
     AdminBookingsController,
     AdminProvidersController,
     AuditLogsController,
   ],
   providers: [
     AdminAccountsService,
+    AdminAnalyticsService,
     AdminBookingsService,
     AdminProvidersService,
     AuditLogService,

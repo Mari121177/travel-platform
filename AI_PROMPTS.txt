@@ -1056,6 +1056,71 @@ Address Hana's review: add travel-date filtering in addition to createdAt, and v
 How the output was used:
 Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
 ================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: HTL-26
+Category: Code generation
+Prompt:
+Add the hotel moderator review reply bonus.
+How the output was used:
+Added optional reply/repliedAt fields to reviews, a validated PATCH /api/reviews/:id/reply endpoint for hotel moderators, and an ownership check against assignedProviderId. Tested with a real review and hotel moderator: reply returned 200 with the reply and timestamp. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BLG-13
+Category: Code generation
+Prompt:
+Implement the bonus that lets a post author attach one of their itineraries.
+How the output was used:
+Added an optional itineraryId to posts and DTOs, validated ownership in create/update, and exposed it on the public post page. Tested: created an itinerary and a published post with that itinerary; the public post returned the matching itineraryId. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-28
+Category: Code generation
+Prompt:
+Implement PDF export for the owner's itinerary.
+How the output was used:
+Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-01
+Category: Code generation
+Prompt:
+Implement the admin analytics bonus: confirmed bookings and revenue per provider over a selected period.
+How the output was used:
+Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Code generation
+Prompt:
+Implement the favourites bonus for active hotels and public itineraries.
+How the output was used:
+Added the favourites module, unique (userId,type,targetId) schema, POST/GET/DELETE endpoints, target validation and labels in the list. Tested add/list/delete for an active hotel; build and lint pass. Test user/favourite cleaned up.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-02
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: paginate GET /api/favorites with GEN-05 page size 10.
+How the output was used:
+Added page query validation, skip/limit, total/page/limit/totalPages while keeping labels for the current page. Tested page=1 on an empty list: returned total 0, page 1, limit 10, totalPages 0. Build and lint pass.
+================================================
 ================================================
 Date: 2026-11-19
 Student: Mariam
@@ -1078,6 +1143,7 @@ Address Hana's final FLT-19 edge cases: reject a negative age and confirm invali
 How the output was used:
 Added Number.isFinite(age) and age < 0 guards before type matching. Confirmed the DTO already rejects invalid dates via IsDateString. Tested: DOB after departure returned 400 with a clear message; DOB "not-a-date" returned 400 from DTO validation. Build and lint pass.
 ================================================
+================================================
 Date: 2026-11-20
 Student: Mariam
 Tool: OpenCode
@@ -1087,4 +1153,14 @@ Prompt:
 Address Maya's confirmed gap: reject future dates of birth and impossible calendar dates that JavaScript would otherwise roll over.
 How the output was used:
 Added an explicit DOB validity check before age matching: the date must parse to the same YYYY-MM-DD and must not be after departure. Tested the exact future-infant request (2030-01-01): returned 400. Tested 2026-02-31: returned 400. Build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Habiba's review: reject any future date of birth, including one before departure.
+How the output was used:
+Changed the DOB guard from comparing with departure time to comparing with the current date. Tested the exact case (DOB 2026-12-01, infant, departure 2026-12-20): returned 400. A valid 2026-01-01 infant still returned 201. Build/lint pass.
 ================================================

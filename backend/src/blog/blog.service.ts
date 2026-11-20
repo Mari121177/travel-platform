@@ -13,6 +13,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { ListMyPostsQueryDto } from './dto/list-my-posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostStatus } from './post-status.enum';
+import { Itinerary } from '../itineraries/schemas/itinerary.schema';
 import { Post, PostDocument } from './schemas/post.schema';
 import { PostImagesService } from './post-images.service';
 
@@ -23,12 +24,14 @@ export class BlogService {
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    @InjectModel(Itinerary.name) private readonly itineraryModel: Model<Itinerary>,
     private readonly postImagesService: PostImagesService,
   ) {}
 
   /** BLG-01: create a post as a draft (default) or published. */
   async create(authorId: string, dto: CreatePostDto) {
     const status = dto.status ?? PostStatus.Draft;
+    const itineraryId = await this.ownedItineraryId(authorId, dto.itineraryId);
     return this.postModel.create({
       authorId: new Types.ObjectId(authorId),
       title: dto.title,
@@ -37,6 +40,7 @@ export class BlogService {
       images: dto.images ?? [],
       status,
       publishedAt: status === PostStatus.Published ? new Date() : null,
+      itineraryId,
     });
   }
 
@@ -62,7 +66,7 @@ export class BlogService {
         .skip((page - 1) * limit)
         .limit(limit)
         .select(
-          'title status isHidden createdAt publishedAt likeCount commentCount',
+          'title status isHidden createdAt publishedAt likeCount commentCount itineraryId',
         )
         .lean()
         .exec(),
@@ -87,6 +91,9 @@ export class BlogService {
     if (dto.body !== undefined) post.body = dto.body;
     if (dto.tags !== undefined) post.tags = dto.tags;
     if (dto.images !== undefined) post.images = dto.images;
+    if (dto.itineraryId !== undefined) {
+      post.itineraryId = await this.ownedItineraryId(authorId, dto.itineraryId);
+    }
     if (dto.status !== undefined) {
       post.status = dto.status;
     }
@@ -133,6 +140,19 @@ export class BlogService {
     // BLG-10: the post is gone, so its image files go too
     await this.postImagesService.deleteUnusedFiles(post.images);
     return { deleted: true, id: postId };
+  }
+
+  private async ownedItineraryId(
+    authorId: string,
+    itineraryId?: string,
+  ): Promise<Types.ObjectId | null> {
+    if (!itineraryId) return null;
+    const exists = await this.itineraryModel.exists({
+      _id: itineraryId,
+      ownerId: new Types.ObjectId(authorId),
+    });
+    if (!exists) throw new NotFoundException('Itinerary not found');
+    return new Types.ObjectId(itineraryId);
   }
 
   /**
