@@ -21,6 +21,9 @@ export class Flight {
   @Prop({ enum: Object.values(FlightStatus), default: FlightStatus.SCHEDULED }) status: FlightStatus;
   @Prop() cancelReason?: string;
   @Prop() cancelledAt?: Date;
+
+  /** True while a cancellation still has to process its bookings, so a failed attempt can be retried (FLT-06) */
+  @Prop({ default: false }) cancellationPending?: boolean;
 }
 export type FlightDocument = HydratedDocument<Flight>;
 export const FlightSchema = SchemaFactory.createForClass(Flight);

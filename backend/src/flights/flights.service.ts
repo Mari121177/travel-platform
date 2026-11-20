@@ -138,15 +138,31 @@ export class FlightsService {
   // ---------------- FLT-06 ----------------
   async cancel(id: string, dto: CancelFlightDto, user: AuthUser) {
     const flight = await this.getOwnedFlight(id, user);
+
+    // Retry: an earlier attempt saved the flight as Cancelled but failed while processing its
+    // bookings. cancelAllForFlight is idempotent, so finishing the job is safe.
+    if (flight.status === FlightStatus.CANCELLED && flight.cancellationPending) {
+      return this.finishCancellation(flight);
+    }
+
     this.assertScheduled(flight);
     flight.status = FlightStatus.CANCELLED;
     flight.cancelReason = dto.reason;
     flight.cancelledAt = new Date();
+    flight.cancellationPending = true;
     await flight.save();
+    return this.finishCancellation(flight);
+  }
 
-    // Adala's method: cancels Confirmed bookings (100% refund), releases seats,
-    // expires pending holds and sends the FLIGHT_CANCELLED notifications itself.
+  /**
+   * Cancels Confirmed bookings (100% refund), releases seats, expires pending holds and sends the
+   * FLIGHT_CANCELLED notifications (all inside the flight-bookings module). The flag is cleared only
+   * after that succeeds, so a failure leaves the flight retryable instead of half-cancelled.
+   */
+  private async finishCancellation(flight: FlightDocument) {
     const bookings = await this.bookings.cancelAllForFlight(flight.id);
+    flight.cancellationPending = false;
+    await flight.save();
     return { ...(await this.view(flight)), bookings };
   }
 
