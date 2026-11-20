@@ -11,5 +11,6 @@ import { FlightSearchService } from './flight-search.service';
   imports: [FlightsModule, AirlinesModule],
   controllers: [FlightSearchController],
   providers: [FlightSearchService],
+  exports: [FlightSearchService],
 })
 export class FlightSearchModule {}
