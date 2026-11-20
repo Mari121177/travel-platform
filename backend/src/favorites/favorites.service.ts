@@ -12,7 +12,7 @@ import {
   ItineraryVisibility,
 } from '../itineraries/schemas/itinerary.schema';
 import { User } from '../users/schemas/user.schema';
-import { CreateFavoriteDto } from './dto/favorite.dto';
+import { CreateFavoriteDto, ListFavoritesQueryDto } from './dto/favorite.dto';
 import {
   Favorite,
   FavoriteType,
@@ -44,12 +44,20 @@ export class FavoritesService {
     }
   }
 
-  async list(userId: string) {
-    const favorites = await this.favoriteModel
-      .find({ userId: new Types.ObjectId(userId) })
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
+  async list(userId: string, query: ListFavoritesQueryDto) {
+    const page = query.page ?? 1;
+    const limit = 10; // GEN-05
+    const filter = { userId: new Types.ObjectId(userId) };
+    const [favorites, total] = await Promise.all([
+      this.favoriteModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.favoriteModel.countDocuments(filter).exec(),
+    ]);
 
     const hotelIds = favorites
       .filter((f) => f.type === FavoriteType.Hotel)
@@ -107,6 +115,10 @@ export class FavoritesService {
           createdAt: f.createdAt,
         };
       }),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 

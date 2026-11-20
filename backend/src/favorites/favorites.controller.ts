@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiCookieAuth,
@@ -12,7 +12,7 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
-import { CreateFavoriteDto, FavoriteParamsDto } from './dto/favorite.dto';
+import { CreateFavoriteDto, FavoriteParamsDto, ListFavoritesQueryDto } from './dto/favorite.dto';
 import { FavoritesService } from './favorites.service';
 
 @ApiTags('Favourites')
@@ -35,10 +35,13 @@ export class FavoritesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'BON-02: my favourites, newest first' })
-  @ApiOkResponse({ description: 'Returns { items }' })
-  list(@CurrentUser('id') userId: string) {
-    return this.service.list(userId);
+  @ApiOperation({ summary: 'BON-02: my favourites, newest first, 10 per page' })
+  @ApiOkResponse({ description: 'Returns { items, total, page, limit, totalPages }' })
+  list(
+    @CurrentUser('id') userId: string,
+    @Query() query: ListFavoritesQueryDto,
+  ) {
+    return this.service.list(userId, query);
   }
 
   @Delete(':type/:targetId')
