@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   forwardRef,
   Inject,
   Injectable,
@@ -8,7 +9,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CreateReviewDto, UpdateReviewDto } from './dto/review.dto';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { CreateReviewDto, ReplyReviewDto, UpdateReviewDto } from './dto/review.dto';
 import { PageQueryDto } from './dto/queries.dto';
 import { round2, todayString } from './date.util';
 import { AccountStatus } from '../common/enums/account-status.enum';
@@ -125,6 +127,21 @@ export class ReviewsService {
       ratingAvg: row ? Math.round(row.avg * 10) / 10 : 0,
       ratingCount: row?.count ?? 0,
     };
+  }
+
+  // HTL-26: the hotel's moderator replies to one of its reviews.
+  async reply(reviewId: string, user: AuthUser, dto: ReplyReviewDto) {
+    const review = await this.reviewModel.findById(reviewId);
+    if (!review) throw new NotFoundException('Review not found');
+    if (user.assignedProviderId !== review.hotelId.toString()) {
+      throw new ForbiddenException(
+        'You can only reply to reviews of your own hotel',
+      );
+    }
+    review.reply = dto.reply;
+    review.repliedAt = new Date();
+    await review.save();
+    return review;
   }
 
   // ---- for Mariam's moderation (GEN-10): hide / unhide / delete + rating refresh ----
