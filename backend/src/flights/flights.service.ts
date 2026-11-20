@@ -172,7 +172,7 @@ export class FlightsService {
 
     const { totalSeats, ...rest } = dto;
     const filter: Record<string, any> = { _id: cabinId, flight: flight._id };
-    const set: Record<string, any> = { ...rest };
+    const set: Record<string, any> = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
     if (totalSeats !== undefined) {
       set.totalSeats = totalSeats;
       // atomic: seats cannot drop below booked + held

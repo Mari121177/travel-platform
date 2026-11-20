@@ -11,6 +11,8 @@ import { Model, Types } from 'mongoose';
 import { CreateReviewDto, UpdateReviewDto } from './dto/review.dto';
 import { PageQueryDto } from './dto/queries.dto';
 import { round2, todayString } from './date.util';
+import { AccountStatus } from '../common/enums/account-status.enum';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { BookingStatus, PAGE_SIZE } from './hotel-booking.constants';
 import { HotelsService } from '../hotels/hotels.service';
 import { HotelBooking, HotelBookingDocument } from './schemas/hotel-booking.schema';
@@ -23,6 +25,7 @@ export class ReviewsService {
   constructor(
     @InjectModel(Review.name) private readonly reviewModel: Model<ReviewDocument>,
     @InjectModel(HotelBooking.name) private readonly bookingModel: Model<HotelBookingDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @Inject(forwardRef(() => HotelsService)) private readonly hotels: HotelsService,
   ) {}
 
@@ -75,7 +78,7 @@ export class ReviewsService {
   async listForHotel(hotelId: string, query: PageQueryDto) {
     const page = query.page ?? 1;
     const filter = { hotelId: oid(hotelId), isHidden: false };
-    const [data, total, summary] = await Promise.all([
+    const [reviews, total, summary] = await Promise.all([
       this.reviewModel
         .find(filter)
         .sort({ createdAt: -1 })
@@ -85,6 +88,31 @@ export class ReviewsService {
       this.reviewModel.countDocuments(filter),
       this.ratingSummary(hotelId),
     ]);
+
+    // ACC-12: a deactivated reviewer is shown as "Deleted user".
+    const userIds = [...new Set(reviews.map((r) => String(r.userId)))];
+    const users = userIds.length
+      ? await this.userModel
+          .find({ _id: { $in: userIds } })
+          .select('name status')
+          .lean()
+          .exec()
+      : [];
+    const authorById = new Map(users.map((u) => [String(u._id), u]));
+    const data = reviews.map((review) => {
+      const author = authorById.get(String(review.userId));
+      return {
+        ...review,
+        author: {
+          _id: review.userId,
+          name:
+            author && author.status !== AccountStatus.Deactivated
+              ? author.name
+              : 'Deleted user',
+        },
+      };
+    });
+
     return { ...summary, data, total, page, limit: PAGE_SIZE };
   }
 

@@ -613,6 +613,37 @@ export class FlightBookingsService
     return !!found;
   }
 
+  // ACC-12: active Pending Payment holds also block deactivation.
+  async hasActiveHold(userId: string): Promise<boolean> {
+    const found = await this.bookingModel.exists({
+      userId: new Types.ObjectId(userId),
+      status: FlightBookingStatus.PendingPayment,
+      holdExpiresAt: { $gt: new Date() },
+    });
+    return !!found;
+  }
+
+  // ACC-15: users with Confirmed flight bookings on an airline, so the admin
+  // provider-deactivation flow can notify them. Existing bookings stay valid.
+  async getUserIdsWithConfirmedBookingsForAirline(
+    airlineId: string,
+    onlyUpcoming = true,
+  ): Promise<string[]> {
+    if (!Types.ObjectId.isValid(airlineId)) return [];
+    const query: Record<string, unknown> = {
+      airlineId: new Types.ObjectId(airlineId),
+      status: FlightBookingStatus.Confirmed,
+    };
+    if (onlyUpcoming) {
+      query.$or = [
+        { arrivalTime: { $gte: new Date() } },
+        { arrivalTime: null },
+      ];
+    }
+    const ids = await this.bookingModel.distinct('userId', query);
+    return ids.map((id) => String(id));
+  }
+
   // ---------- ACC-17: used by GET /api/admin/bookings ----------
 
   async listAllForAdmin(
@@ -630,6 +661,13 @@ export class FlightBookingsService
     if (filter.from) createdAt.$gte = this.parseDate(filter.from, false);
     if (filter.to) createdAt.$lte = this.parseDate(filter.to, true);
     if (Object.keys(createdAt).length) query.createdAt = createdAt;
+
+    if (filter.travelFrom || filter.travelTo) {
+      const departure: Record<string, Date> = {};
+      if (filter.travelFrom) departure.$gte = this.parseDate(filter.travelFrom, false);
+      if (filter.travelTo) departure.$lte = this.parseDate(filter.travelTo, true);
+      query.departureTime = departure;
+    }
 
     if (filter.status === 'Completed') {
       query.status = FlightBookingStatus.Confirmed;
@@ -810,6 +848,17 @@ export class FlightBookingsService
     // FLT-12/FLT-19: the declared passenger type must match the age at
     // departure: infant <2, child 2-11, adult 12+.
     dto.passengers.forEach((p, i) => {
+      const dobText = p.dateOfBirth.slice(0, 10);
+      const dob = new Date(`${dobText}T00:00:00Z`);
+      if (
+        Number.isNaN(dob.getTime()) ||
+        dob.toISOString().slice(0, 10) !== dobText ||
+        dob > out.flight.departureTime
+      ) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} has an invalid date of birth`,
+        );
+      }
       const age = this.ageOn(p.dateOfBirth, out.flight.departureTime);
       if (!Number.isFinite(age) || age < 0) {
         throw new BadRequestException(

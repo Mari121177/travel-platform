@@ -980,6 +980,83 @@ How the output was used:
 Added GET /api/itineraries/:id/flights for the itinerary owner. It finds the first day's city and its airport, uses the itinerary start date as the outbound date, optionally uses the last day as the default return date, and reuses FlightSearchService with passenger/cabin/price/sort/page filters. Tested with a Dubai itinerary: one-way from CAI returned the MS777 flight, and round-trip used 2026-12-20 as the default return date. Test data was removed; build, lint and startup pass.
 ================================================
 ================================================
+Date: 2026-11-17
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01, GEN-07
+Category: Code generation
+Prompt:
+Implement the admin provider deactivation endpoints for hotel and airline providers, including hiding them from search, keeping existing confirmed bookings valid, notifying affected users and writing an audit log entry.
+How the output was used:
+Added PATCH /api/admin/providers/:type/:id/deactivate and reactivate, wired HotelsService.setHotelActive and AirlinesService.setActive, added provider-type parameter validation, notified provider moderators plus users with confirmed hotel bookings, recorded DEACTIVATE_PROVIDER/REACTIVATE_PROVIDER in the audit log, and returned the affected-user count. Build and lint pass. Airline passenger notifications remain pending because the flight-bookings module does not exist yet.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15, GEN-01
+Category: Code generation, Testing
+Prompt:
+Complete the airline side of provider deactivation now that flight bookings exists, so passengers with Confirmed bookings are notified too.
+How the output was used:
+Added getUserIdsWithConfirmedBookingsForAirline to FlightBookingsService and used it in AdminProvidersService alongside hotel guests. Tested PATCH deactivate/reactivate for the EgyptAir test provider as admin: both returned 200 and the airline was restored to active. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-15
+Category: Debugging, Testing
+Prompt:
+Address Hana's review of provider deactivation: reject deactivating an already-deactivated provider and reactivating an already-active one, so notifications and audit entries are not duplicated.
+How the output was used:
+Loaded the current provider before updating and returned 409 when the requested state already matched. Tested as admin on EgyptAir: deactivate 200, second deactivate 409, reactivate 200, second reactivate 409; airline restored active. Application startup, build and lint pass.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Code generation
+Prompt:
+Implement account self-deactivation with upcoming booking checks, cookie clearing and hiding the deactivated user's public itineraries.
+How the output was used:
+Added DELETE /api/users/me, checked both hotel and flight bookings for upcoming Confirmed reservations, set the account to Deactivated and cleared its session cookies, and excluded deactivated owners from public itinerary search/view/clone. Tested in Swagger: deactivation returned 200 and cleared cookies; the next login returned 403; test data was removed.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: block deactivation while an active Pending Payment hold exists, and make reviews of deactivated users show as "Deleted user".
+How the output was used:
+Added hasActiveHold to both booking services, included it in the deactivation check, and added reviewer names/status to the public review list. Tested with a future flight hold: DELETE /api/users/me returned 409; after removing the hold it returned 200. Application startup and build/lint pass. Test data was removed.
+================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Code generation
+Prompt:
+Implement the admin bookings list combining flight and hotel bookings, with type/status/date filters and correct pagination.
+How the output was used:
+Added GET /api/admin/bookings, a shared query DTO, and AdminBookingsService. The service fetches the newest rows from the hotel and flight admin lists, merges and sorts by createdAt, then paginates the combined list. I added an optional limit to the hotel admin list for merged pagination. Tested as admin: type=all, type=hotel, and type=flight&status=Confirmed all returned valid responses. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: add travel-date filtering in addition to createdAt, and verify that type=all accepts Completed, Expired and Cancelled on both hotel and flight sides.
+How the output was used:
+Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
+================================================
+================================================
 Date: 2026-11-19
 Student: Mariam
 Tool: OpenCode
@@ -990,6 +1067,7 @@ Fix the remaining FLT-19 passenger validation gap by checking that each passenge
 How the output was used:
 Added infant (<2), child (2-11) and adult (12+) validation based on date of birth at the outbound departure time. Tested via the booking summary: an adult type with a 6-year-old date of birth returned 400; a correct child returned 200; a correct infant returned 200. Test user removed; build and lint pass.
 ================================================
+================================================
 Date: 2026-11-20
 Student: Mariam
 Tool: OpenCode
@@ -999,4 +1077,14 @@ Prompt:
 Address Hana's final FLT-19 edge cases: reject a negative age and confirm invalid dates are rejected.
 How the output was used:
 Added Number.isFinite(age) and age < 0 guards before type matching. Confirmed the DTO already rejects invalid dates via IsDateString. Tested: DOB after departure returned 400 with a clear message; DOB "not-a-date" returned 400 from DTO validation. Build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Maya's confirmed gap: reject future dates of birth and impossible calendar dates that JavaScript would otherwise roll over.
+How the output was used:
+Added an explicit DOB validity check before age matching: the date must parse to the same YYYY-MM-DD and must not be after departure. Tested the exact future-infant request (2030-01-01): returned 400. Tested 2026-02-31: returned 400. Build and lint pass.
 ================================================

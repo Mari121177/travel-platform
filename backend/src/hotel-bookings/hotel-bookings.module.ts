@@ -4,6 +4,7 @@ import { HotelBookingsController } from './hotel-bookings.controller';
 import { HotelBookingsService } from './hotel-bookings.service';
 import { HotelsModule } from '../hotels/hotels.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
 import { HOTEL_BOOKING_PORT } from './ports/hotel-booking.port';
 import { HotelReservationsController } from './hotel-reservations.controller';
 import { ReviewsController } from './reviews.controller';
@@ -17,6 +18,7 @@ import { RoomNight, RoomNightSchema } from './schemas/room-night.schema';
 @Module({
   imports: [
     NotificationsModule,
+    UsersModule,
     forwardRef(() => HotelsModule), // circular: HotelsModule imports this module back
     MongooseModule.forFeature([
       { name: HotelBooking.name, schema: HotelBookingSchema },

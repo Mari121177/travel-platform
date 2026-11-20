@@ -247,7 +247,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
       throw new ConflictException(`Cannot confirm a ${booking.status} reservation`);
     }
     if (!booking.holdExpiresAt || booking.holdExpiresAt < new Date()) {
-      // TODO(member 7): payment succeeded after the hold expired -> refund it
+      
       throw new ConflictException('The hold on this reservation has expired');
     }
     await this.connection.transaction(async (session) => {
@@ -553,6 +553,10 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   /** ACC-17: all hotel reservations, newest first, filter by status and createdAt range, 10 per page. */
   async listAllForAdmin(filter: AdminHotelBookingFilter = {}): Promise<AdminHotelBookingPage> {
     const page = filter.page && filter.page >= 1 ? Math.floor(filter.page) : 1;
+    const limit = Math.min(
+      100,
+      Math.max(1, Math.floor(filter.limit ?? PAGE_SIZE)),
+    );
     const today = todayString();
     const query: Record<string, unknown> = {};
 
@@ -580,12 +584,20 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     }
     if (createdAt.$gte || createdAt.$lte) query.createdAt = createdAt;
 
+    // ACC-17: travel-date filter (hotel check-in date).
+    if (filter.travelFrom || filter.travelTo) {
+      const checkIn: Record<string, string> = {};
+      if (filter.travelFrom) checkIn.$gte = filter.travelFrom;
+      if (filter.travelTo) checkIn.$lte = filter.travelTo;
+      query.checkIn = checkIn;
+    }
+
     const [rows, total] = await Promise.all([
       this.bookingModel
         .find(query)
         .sort({ createdAt: -1 })
-        .skip((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
+        .skip((page - 1) * limit)
+        .limit(limit)
         .select('reference userId hotelId hotelName checkIn checkOut totalPrice status createdAt')
         .lean(),
       this.bookingModel.countDocuments(query),
@@ -608,7 +620,20 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
         : b.status) as AdminBookingStatus,
       createdAt: b.createdAt,
     }));
-    return { data, total, page, limit: PAGE_SIZE };
+    return { data, total, page, limit };
+  }
+
+  // ACC-12: a user with an active Pending Payment hold cannot deactivate,
+  // otherwise the payment could confirm after the account is deactivated.
+  async hasActiveHold(userId: string, session?: ClientSession): Promise<boolean> {
+    const found = await this.bookingModel
+      .exists({
+        userId: oid(userId),
+        status: BookingStatus.PendingPayment,
+        holdExpiresAt: { $gt: new Date() },
+      })
+      .session(session ?? null);
+    return !!found;
   }
 
   /**
