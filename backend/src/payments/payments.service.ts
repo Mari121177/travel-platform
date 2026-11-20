@@ -261,6 +261,25 @@ export class PaymentsService implements PaymentsPort {
     return this.refundView(refund);
   }
 
+  /** PAY-03: the refund of a booking, for the booking details page. */
+  async getRefundForBooking(
+    userId: string,
+    type: BookingType,
+    bookingId: string,
+  ) {
+    const refund = await this.refundModel
+      .findOne({
+        userId: oid(userId),
+        bookingType: type,
+        bookingId: oid(bookingId),
+      })
+      .exec();
+    if (!refund) {
+      throw new NotFoundException('No refund for this booking');
+    }
+    return this.refundView(refund);
+  }
+
   /**
    * PAYMENTS_PORT: called by the booking modules after a Confirmed booking
    * becomes Cancelled with amount > 0 (amount in platform currency units).
