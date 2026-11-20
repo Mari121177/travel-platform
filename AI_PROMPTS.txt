@@ -1056,3 +1056,13 @@ Address Hana's review: add travel-date filtering in addition to createdAt, and v
 How the output was used:
 Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
 ================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: BON-01
+Category: Code generation
+Prompt:
+Implement the admin analytics bonus: confirmed bookings and revenue per provider over a selected period.
+How the output was used:
+Added GET /api/admin/analytics with optional from/to (default last 30 days). Aggregates Confirmed hotel bookings by hotel and Confirmed flight bookings by airline, returning per-provider bookings/revenue and totals. Tested as admin with a one-year range; returned the existing hotel provider totals. Build and lint pass.
+================================================
