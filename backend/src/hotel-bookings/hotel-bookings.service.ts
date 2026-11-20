@@ -247,7 +247,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
       throw new ConflictException(`Cannot confirm a ${booking.status} reservation`);
     }
     if (!booking.holdExpiresAt || booking.holdExpiresAt < new Date()) {
-      // TODO(member 7): payment succeeded after the hold expired -> refund it
+      
       throw new ConflictException('The hold on this reservation has expired');
     }
     await this.connection.transaction(async (session) => {
