@@ -1034,3 +1034,25 @@ Address Hana's review: block deactivation while an active Pending Payment hold e
 How the output was used:
 Added hasActiveHold to both booking services, included it in the deactivation check, and added reviewer names/status to the public review list. Tested with a future flight hold: DELETE /api/users/me returned 409; after removing the hold it returned 200. Application startup and build/lint pass. Test data was removed.
 ================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Code generation
+Prompt:
+Implement the admin bookings list combining flight and hotel bookings, with type/status/date filters and correct pagination.
+How the output was used:
+Added GET /api/admin/bookings, a shared query DTO, and AdminBookingsService. The service fetches the newest rows from the hotel and flight admin lists, merges and sorts by createdAt, then paginates the combined list. I added an optional limit to the hotel admin list for merged pagination. Tested as admin: type=all, type=hotel, and type=flight&status=Confirmed all returned valid responses. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-17
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: add travel-date filtering in addition to createdAt, and verify that type=all accepts Completed, Expired and Cancelled on both hotel and flight sides.
+How the output was used:
+Added travelFrom/travelTo to the admin bookings query and both admin booking filters. Hotel filtering uses checkIn; flight filtering uses departureTime. Tested as admin with type=all&status=Completed, Expired, Cancelled and a travel date range; all returned valid paginated responses. Build and lint pass.
+================================================

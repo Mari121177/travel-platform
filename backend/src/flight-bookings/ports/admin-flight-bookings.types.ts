@@ -14,6 +14,9 @@ export interface AdminFlightBookingFilter {
   page?: number;
   /** Default 10, maximum 100. */
   limit?: number;
+  /** departureTime range, both ends inclusive. */
+  travelFrom?: string;
+  travelTo?: string;
 }
 
 export interface AdminFlightBookingItem {
