@@ -222,6 +222,7 @@ export class PublicBlogService {
       images: post.images,
       status: post.status,
       publishedAt: post.publishedAt,
+      itineraryId: post.itineraryId ?? null,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       likedByMe: liked !== null,
