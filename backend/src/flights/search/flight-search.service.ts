@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Airline, AirlineDocument } from '../../airlines/airline.schema';
@@ -18,8 +22,21 @@ import type { FlightDetailsDto } from './dto/flight-details.dto';
 import { buildFlightDetails } from './search.details';
 import { buildLegPage } from './search.core';
 import type { AirportInfo, SearchableFlight } from './search.types';
-import { isPastLocalDate, validateSearchCriteria } from './search.utils';
+import {
+  isPastLocalDate,
+  noFlightsMessage,
+  validateSearchCriteria,
+} from './search.utils';
 
+// FLT-11: adds the "No flights found" message when a leg has no results
+function withMessage(
+  response: SearchFlightsResponseDto,
+  outboundTotal: number,
+  returnTotal?: number,
+): SearchFlightsResponseDto {
+  const message = noFlightsMessage(outboundTotal, returnTotal);
+  return message ? { ...response, message } : response;
+}
 // FLT-11, FLT-12, FLT-15: public flight search (one-way and round trip)
 @Injectable()
 export class FlightSearchService {
@@ -69,7 +86,7 @@ export class FlightSearchService {
     // FLT-12: a return date makes it a round trip; the return leg flies the
     // other way, on a local date at the original destination
     if (!query.returnDate) {
-      return { tripType: 'one-way', outbound };
+      return withMessage({ tripType: 'one-way', outbound }, outbound.total);
     }
     const returnLeg = await this.searchLeg(
       query.destination,
@@ -78,9 +95,14 @@ export class FlightSearchService {
       query,
       airports,
     );
-    return { tripType: 'round-trip', outbound, return: returnLeg };
+    return withMessage(
+      { tripType: 'round-trip', outbound, return: returnLeg },
+      outbound.total,
+      returnLeg.total,
+    );
   }
-    // FLT-17: details of one flight (public)
+
+  // FLT-17: details of one flight (public)
   async getDetails(id: string): Promise<FlightDetailsDto> {
     if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       throw new BadRequestException('Invalid flight id');
@@ -128,7 +150,7 @@ export class FlightSearchService {
       destination,
     });
   }
-  
+
   private async searchLeg(
     from: string,
     to: string,
@@ -173,7 +195,8 @@ export class FlightSearchService {
         airline: {
           id: String(airline._id),
           name: airline.name,
-          isActive: airline.isActive,
+          // airlines created before the field existed have it undefined
+          isActive: airline.isActive !== false,
         },
         originCode: f.departureAirport,
         destinationCode: f.arrivalAirport,

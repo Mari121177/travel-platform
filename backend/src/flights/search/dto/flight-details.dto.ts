@@ -43,7 +43,7 @@ export class ExtraBaggageDto {
   maxExtraBags!: number;
 }
 
-export class CancellationTierDto {
+export class DetailsCancellationTierDto {
   @ApiProperty({
     example: 7,
     description: 'At least this many days before departure',
@@ -107,9 +107,9 @@ export class FlightDetailsDto {
   extraBaggage!: ExtraBaggageDto;
 
   @ApiProperty({
-    type: () => [CancellationTierDto],
+    type: () => [DetailsCancellationTierDto],
     description:
       'Airline cancellation policy, earliest tier first (empty if none)',
   })
-  cancellationPolicy!: CancellationTierDto[];
+  cancellationPolicy!: DetailsCancellationTierDto[];
 }

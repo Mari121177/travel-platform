@@ -8,6 +8,7 @@ import {
   validateSearchCriteria,
   isPastLocalDate,
   todayInTimeZone,
+  noFlightsMessage,
 } from './search.utils';
 
 describe('localDateToUtcRange (FLT-11)', () => {
@@ -191,5 +192,19 @@ describe('past dates (FLT-11)', () => {
 
   it('uses the departure airport time zone', () => {
     expect(isPastLocalDate('2026-11-13', 'America/New_York', now)).toBe(false);
+  });
+});
+
+describe('noFlightsMessage (FLT-11)', () => {
+  it('one-way: message only when nothing is found', () => {
+    expect(noFlightsMessage(0)).toBe('No flights found');
+    expect(noFlightsMessage(3)).toBeUndefined();
+  });
+
+  it('round trip: outbound first, then the return leg', () => {
+    expect(noFlightsMessage(0, 0)).toBe('No flights found');
+    expect(noFlightsMessage(0, 2)).toBe('No flights found');
+    expect(noFlightsMessage(2, 0)).toBe('No flights found for the return leg');
+    expect(noFlightsMessage(2, 1)).toBeUndefined();
   });
 });
