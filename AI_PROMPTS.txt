@@ -1059,6 +1059,17 @@ Added travelFrom/travelTo to the admin bookings query and both admin booking fil
 Date: 2026-11-20
 Student: Mariam
 Tool: OpenCode
+Related Requirement: HTL-26
+Category: Code generation
+Prompt:
+Add the hotel moderator review reply bonus.
+How the output was used:
+Added optional reply/repliedAt fields to reviews, a validated PATCH /api/reviews/:id/reply endpoint for hotel moderators, and an ownership check against assignedProviderId. Tested with a real review and hotel moderator: reply returned 200 with the reply and timestamp. Build and lint pass.
+================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
 Related Requirement: BLG-13
 Category: Code generation
 Prompt:
