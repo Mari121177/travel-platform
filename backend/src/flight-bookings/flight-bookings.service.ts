@@ -811,6 +811,11 @@ export class FlightBookingsService
     // departure: infant <2, child 2-11, adult 12+.
     dto.passengers.forEach((p, i) => {
       const age = this.ageOn(p.dateOfBirth, out.flight.departureTime);
+      if (!Number.isFinite(age) || age < 0) {
+        throw new BadRequestException(
+          `Passenger ${i + 1} dateOfBirth must be a valid date before departure`,
+        );
+      }
       const expected = age < 2 ? 'infant' : age < 12 ? 'child' : 'adult';
       const declared = p.type ?? 'adult';
       if (declared !== expected) {

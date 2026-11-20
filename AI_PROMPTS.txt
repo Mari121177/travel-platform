@@ -972,10 +972,31 @@ Added the Report schema with one-report-per-user-per-item, POST /api/reports, ad
 Date: 2026-11-19
 Student: Mariam
 Tool: OpenCode
+Related Requirement: ITN-26
+Category: Code generation
+Prompt:
+Implement ITN-26 itinerary flight search, completing the part Habiba Khaled could not finish.
+How the output was used:
+Added GET /api/itineraries/:id/flights for the itinerary owner. It finds the first day's city and its airport, uses the itinerary start date as the outbound date, optionally uses the last day as the default return date, and reuses FlightSearchService with passenger/cabin/price/sort/page filters. Tested with a Dubai itinerary: one-way from CAI returned the MS777 flight, and round-trip used 2026-12-20 as the default return date. Test data was removed; build, lint and startup pass.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
 Related Requirement: FLT-19, FLT-12
 Category: Debugging, Testing
 Prompt:
 Fix the remaining FLT-19 passenger validation gap by checking that each passenger's declared type matches their age at departure.
 How the output was used:
 Added infant (<2), child (2-11) and adult (12+) validation based on date of birth at the outbound departure time. Tested via the booking summary: an adult type with a 6-year-old date of birth returned 400; a correct child returned 200; a correct infant returned 200. Test user removed; build and lint pass.
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: FLT-19
+Category: Debugging, Testing
+Prompt:
+Address Hana's final FLT-19 edge cases: reject a negative age and confirm invalid dates are rejected.
+How the output was used:
+Added Number.isFinite(age) and age < 0 guards before type matching. Confirmed the DTO already rejects invalid dates via IsDateString. Tested: DOB after departure returned 400 with a clear message; DOB "not-a-date" returned 400 from DTO validation. Build and lint pass.
 ================================================
