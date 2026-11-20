@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Post, PostSchema } from '../blog/schemas/post.schema';
+import { FlightSearchModule } from '../flights/search/flight-search.module';
 import { HotelsModule } from '../hotels/hotels.module';
 import { UploadsModule } from '../uploads/uploads.module';
 import { UsersModule } from '../users/users.module';
@@ -15,6 +16,8 @@ import { ItinerariesController } from './itineraries.controller';
 import { ItinerariesService } from './itineraries.service';
 import { ItineraryDaysController } from './itinerary-days.controller';
 import { ItineraryDaysService } from './itinerary-days.service';
+import { ItineraryFlightsController } from './itinerary-flights.controller';
+import { ItineraryFlightsService } from './itinerary-flights.service';
 import { ItineraryHotelsController } from './itinerary-hotels.controller';
 import { ItineraryHotelsService } from './itinerary-hotels.service';
 import { PublicItinerariesController } from './public-itineraries.controller';
@@ -47,6 +50,8 @@ import { TransportCostsService } from './transport-costs.service';
     ]),
     // ITN-25: reuses the hotel search
     HotelsModule,
+    // ITN-26: reuses the flight search
+    FlightSearchModule,
   ],
   controllers: [
     PublicItinerariesController,
@@ -57,6 +62,7 @@ import { TransportCostsService } from './transport-costs.service';
     BudgetsController,
     TransportCostsController,
     ItineraryHotelsController,
+    ItineraryFlightsController,
   ],
   providers: [
     PublicItinerariesService,
@@ -68,6 +74,7 @@ import { TransportCostsService } from './transport-costs.service';
     TransportCostsService,
     ExchangeRatesService,
     ItineraryHotelsService,
+    ItineraryFlightsService,
   ],
   exports: [
     MongooseModule,

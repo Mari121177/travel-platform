@@ -969,6 +969,16 @@ Implement user content reporting and the admin moderation endpoints for reports 
 How the output was used:
 Added the Report schema with one-report-per-user-per-item, POST /api/reports, admin report list/detail/resolve endpoints, direct admin hide/delete endpoints, and audit actions for dismiss/hide/delete. The admin actions reuse the existing isHidden fields and review rating recalculation; post/comment/itinerary deletion cascades to related records. Build, lint and application startup pass. Swagger testing is pending.
 ================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-26
+Category: Code generation
+Prompt:
+Implement ITN-26 itinerary flight search, completing the part Habiba Khaled could not finish.
+How the output was used:
+Added GET /api/itineraries/:id/flights for the itinerary owner. It finds the first day's city and its airport, uses the itinerary start date as the outbound date, optionally uses the last day as the default return date, and reuses FlightSearchService with passenger/cabin/price/sort/page filters. Tested with a Dubai itinerary: one-way from CAI returned the MS777 flight, and round-trip used 2026-12-20 as the default return date. Test data was removed; build, lint and startup pass.
+================================================
 ================================================
 Date: 2026-11-17
 Student: Mariam
@@ -990,6 +1000,7 @@ Prompt:
 Complete the airline side of provider deactivation now that flight bookings exists, so passengers with Confirmed bookings are notified too.
 How the output was used:
 Added getUserIdsWithConfirmedBookingsForAirline to FlightBookingsService and used it in AdminProvidersService alongside hotel guests. Tested PATCH deactivate/reactivate for the EgyptAir test provider as admin: both returned 200 and the airline was restored to active. Build and lint pass.
+================================================
 ================================================
 Date: 2026-11-19
 Student: Mariam
