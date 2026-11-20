@@ -1077,3 +1077,14 @@ Implement the bonus that lets a post author attach one of their itineraries.
 How the output was used:
 Added an optional itineraryId to posts and DTOs, validated ownership in create/update, and exposed it on the public post page. Tested: created an itinerary and a published post with that itinerary; the public post returned the matching itineraryId. Build and lint pass; test data removed.
 ================================================
+================================================
+Date: 2026-11-20
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ITN-28
+Category: Code generation
+Prompt:
+Implement PDF export for the owner's itinerary.
+How the output was used:
+Added GET /api/itineraries/:id/export using the existing pdfkit dependency. It builds the itinerary view and streams title, dates, countries, each day and its activities/budgets/transport, plus per-currency totals. Tested: endpoint returned 200 application/pdf with a valid %PDF file. Build and lint pass; test data removed.
+================================================
