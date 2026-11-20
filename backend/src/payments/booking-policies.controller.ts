@@ -58,4 +58,24 @@ export class BookingPoliciesController {
       ? this.paymentsService.acceptPolicies(userId, params.type, params.id)
       : undefined;
   }
+
+  @Get(':type/:id/refund')
+  @ApiOperation({
+    summary:
+      'PAY-03: the refund of my cancelled booking and its status (Pending, Refunded, Failed)',
+  })
+  @ApiOkResponse({ description: 'The refund' })
+  @ApiNotFoundResponse({
+    description: 'No refund for this booking, or not yours',
+  })
+  getRefund(
+    @CurrentUser('id') userId: string,
+    @Param() params: BookingParamsDto,
+  ) {
+    return this.paymentsService.getRefundForBooking(
+      userId,
+      params.type,
+      params.id,
+    );
+  }
 }
