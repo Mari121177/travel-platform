@@ -5,9 +5,11 @@ import { HotelsModule } from '../hotels/hotels.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { AdminAccountsController } from './admin-accounts.controller';
+import { AdminAccountsService } from './admin-accounts.service';
 import { AdminBookingsController } from './admin-bookings.controller';
 import { AdminBookingsService } from './admin-bookings.service';
-import { AdminAccountsService } from './admin-accounts.service';
+import { AdminProvidersController } from './admin-providers.controller';
+import { AdminProvidersService } from './admin-providers.service';
 import { AdminSeeder } from './admin.seeder';
 import { AuditLogService } from './audit-log.service';
 import { AuditLogsController } from './audit-logs.controller';
@@ -25,11 +27,13 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
   controllers: [
     AdminAccountsController,
     AdminBookingsController,
+    AdminProvidersController,
     AuditLogsController,
   ],
   providers: [
     AdminAccountsService,
     AdminBookingsService,
+    AdminProvidersService,
     AuditLogService,
     AdminSeeder,
   ],

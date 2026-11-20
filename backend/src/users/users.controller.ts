@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Patch, Res } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
@@ -9,6 +10,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { Response } from 'express';
+import { clearAuthCookies } from '../auth/auth.cookies';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
 
@@ -46,5 +49,25 @@ export class UsersController {
   })
   updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Deactivate my account after confirmation. Blocked while I have upcoming Confirmed bookings (ACC-12)',
+  })
+  @ApiOkResponse({ description: 'Account deactivated; cookies cleared' })
+  @ApiConflictResponse({
+    description: 'An upcoming Confirmed hotel or flight booking exists',
+  })
+  @ApiUnauthorizedResponse({ description: 'Not logged in, or the session expired' })
+  async deactivateMe(
+    @CurrentUser('id') userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.usersService.deactivateAccount(userId);
+    clearAuthCookies(res);
+    return result;
   }
 }

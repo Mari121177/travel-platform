@@ -623,6 +623,19 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     return { data, total, page, limit };
   }
 
+  // ACC-12: a user with an active Pending Payment hold cannot deactivate,
+  // otherwise the payment could confirm after the account is deactivated.
+  async hasActiveHold(userId: string, session?: ClientSession): Promise<boolean> {
+    const found = await this.bookingModel
+      .exists({
+        userId: oid(userId),
+        status: BookingStatus.PendingPayment,
+        holdExpiresAt: { $gt: new Date() },
+      })
+      .session(session ?? null);
+    return !!found;
+  }
+
   /**
    * ACC-15: ids of users who hold Confirmed reservations at a hotel (to notify them when the
    * hotel is deactivated). By default only reservations that have not ended yet

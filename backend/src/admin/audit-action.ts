@@ -5,6 +5,8 @@ export const AuditAction = {
   ReactivateAccount: 'REACTIVATE_ACCOUNT',
   ResetPassword: 'RESET_PASSWORD',
   CreateModerator: 'CREATE_MODERATOR',
+  DeactivateProvider: 'DEACTIVATE_PROVIDER',
+  ReactivateProvider: 'REACTIVATE_PROVIDER',
   DismissReport: 'DISMISS_REPORT',
   HideContent: 'HIDE_CONTENT',
   DeleteContent: 'DELETE_CONTENT',
