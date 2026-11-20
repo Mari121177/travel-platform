@@ -35,11 +35,16 @@ travel-platform/
    npm install
    ```
 
-3. Create `backend/.env` (copy the variable names from `.env.example`) with two values:
+3. Create `backend/.env` (copy the variable names from `.env.example`).
+
+   Required for the backend and seeded admin:
 
    ```
    MONGODB_URI=<team-mongodb-atlas-connection-string>
    JWT_SECRET=<your-own-long-random-string>
+   ADMIN_EMAIL=<admin email>
+   ADMIN_PASSWORD=<admin password with at least one letter and one digit>
+   ADMIN_NAME=<admin display name>
    ```
 
    - `MONGODB_URI`: the connection string sent privately by the team leader.
@@ -48,6 +53,28 @@ travel-platform/
      ```bash
      node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
      ```
+
+   - `ADMIN_*`: used by the startup seeder to create the single admin account
+     (ACC-18). The account is created only if it does not already exist.
+
+   Optional integrations:
+
+   ```
+   PLATFORM_CURRENCY=USD
+   FXRATES_API_KEY=<optional, for itinerary currency conversion>
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_PUBLISHABLE_KEY=pk_test_...
+   COOKIE_SECURE=false
+   ```
+
+   - `PLATFORM_CURRENCY`: the single currency used by bookings, payments and
+     refunds (PAY-04). Use `USD` for the milestone demo.
+   - `FXRATES_API_KEY`: required only when testing live exchange-rate updates;
+     cached rates are used when the API is unavailable.
+   - Stripe keys are required only for payments and refunds. Use test-mode keys.
+   - Set `COOKIE_SECURE=false` only for local HTTP testing if the browser refuses
+     the Secure auth cookies. Never use it in production.
 
    Never commit `.env`.
 
@@ -60,6 +87,15 @@ travel-platform/
 5. Open Swagger UI: http://localhost:3000/api/docs
 
 All routes start with `/api`.
+
+## Milestone 1 evidence
+
+Swagger, Postman and demo screenshots are stored in the team Drive folder:
+
+[Project evidence — screenshots and Postman runs](https://drive.google.com/drive/folders/18qWhUFBIXJ78CwN7U0Cr9CzVvaD4swA2)
+
+Do not commit screenshots or Postman exports to the repository; keep them in
+the shared Drive folder.
 
 ## Git workflow
 
@@ -86,14 +122,22 @@ All routes start with `/api`.
 
 | Module | Owner | Requirement IDs |
 |---|---|---|
-| auth, users, admin | Mariam | ACC, GEN-07, GEN-09, GEN-10 |
-| airlines, flights | Malk | FLT-01 to FLT-10 |
-| flights (search) | Ghada | FLT-11 to FLT-18 |
-| flight-bookings | Adala | FLT-19 to FLT-29 |
-| hotels | Hana | HTL-01 to HTL-15 |
-| hotel-bookings | Maya | HTL-16 to HTL-26 |
-| payments, notifications | Habiba Ahmed | PAY, GEN |
+| auth, users, admin, reports/moderation, reference data | Mariam | ACC, GEN-07, GEN-09, GEN-10, GEN-12, GEN-13 |
+| airlines, flights, flight status and policies | Malk | FLT-01, FLT-03 to FLT-09, FLT-30 |
+| airports, flight search and flight details | Ghada | FLT-02, FLT-11, FLT-12, FLT-15, FLT-17 |
+| flight bookings | Adala | FLT-19 to FLT-29 |
+| hotels, room calendars, hotel Swagger documentation | Hana | HTL-01 to HTL-15 |
+| hotel bookings, reviews, review moderation | Maya | HTL-16 to HTL-26 |
+| payments, notifications | Habiba Ahmed | PAY-01 to PAY-04, GEN-01 |
 | itineraries, blog, uploads | Habiba Khaled | ITN, BLG, GEN-08 |
+
+## Implemented bonus features
+
+- HTL-26: hotel moderator reply to a review
+- BON-01: admin analytics for confirmed bookings and revenue per provider
+- BON-02: favourites for hotels and public itineraries
+- BLG-13: attach an itinerary to a blog post
+- ITN-28: export an itinerary as PDF
 
 ## Milestones
 
