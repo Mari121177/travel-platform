@@ -47,6 +47,10 @@ export class Post {
   @Prop({ type: Date, default: null })
   publishedAt!: Date | null;
 
+  /** BLG-13: optional itinerary attached by its owner. */
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Itinerary', default: null })
+  itineraryId!: Types.ObjectId | null;
+
   /**
    * Counters kept on the post so lists do not need extra queries.
    * BLG-06 (likes) and BLG-05 (comments) add and subtract with $inc.
