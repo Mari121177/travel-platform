@@ -1012,3 +1012,25 @@ Address Hana's review of provider deactivation: reject deactivating an already-d
 How the output was used:
 Loaded the current provider before updating and returned 409 when the requested state already matched. Tested as admin on EgyptAir: deactivate 200, second deactivate 409, reactivate 200, second reactivate 409; airline restored active. Application startup, build and lint pass.
 ================================================
+================================================
+Date: 2026-11-18
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Code generation
+Prompt:
+Implement account self-deactivation with upcoming booking checks, cookie clearing and hiding the deactivated user's public itineraries.
+How the output was used:
+Added DELETE /api/users/me, checked both hotel and flight bookings for upcoming Confirmed reservations, set the account to Deactivated and cleared its session cookies, and excluded deactivated owners from public itinerary search/view/clone. Tested in Swagger: deactivation returned 200 and cleared cookies; the next login returned 403; test data was removed.
+================================================
+================================================
+Date: 2026-11-19
+Student: Mariam
+Tool: OpenCode
+Related Requirement: ACC-12
+Category: Debugging, Testing
+Prompt:
+Address Hana's review: block deactivation while an active Pending Payment hold exists, and make reviews of deactivated users show as "Deleted user".
+How the output was used:
+Added hasActiveHold to both booking services, included it in the deactivation check, and added reviewer names/status to the public review list. Tested with a future flight hold: DELETE /api/users/me returned 409; after removing the hold it returned 200. Application startup and build/lint pass. Test data was removed.
+================================================
