@@ -4,8 +4,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PageQueryDto } from './dto/queries.dto';
-import { CreateReviewDto, UpdateReviewDto } from './dto/review.dto';
+import { CreateReviewDto, ReplyReviewDto, UpdateReviewDto } from './dto/review.dto';
 import { ParseObjectIdPipe } from './parse-object-id.pipe';
 import { ReviewsService } from './reviews.service';
 
@@ -34,6 +35,17 @@ export class ReviewsController {
     @Body() dto: UpdateReviewDto,
   ) {
     return this.service.update(userId, id, dto);
+  }
+
+  @Patch('reviews/:id/reply')
+  @Roles(Role.HotelModerator)
+  @ApiOperation({ summary: 'HTL-26: hotel moderator replies to a review of their hotel' })
+  reply(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: ReplyReviewDto,
+  ) {
+    return this.service.reply(id, user, dto);
   }
 
   @Delete('reviews/:id')
