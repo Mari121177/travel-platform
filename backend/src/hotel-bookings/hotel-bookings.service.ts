@@ -26,9 +26,12 @@ import {
   PAGE_SIZE,
   RoomNightStatus,
 } from './hotel-booking.constants';
+import { AccountStatus } from '../common/enums/account-status.enum';
 import { HotelsService } from '../hotels/hotels.service';
 import { NotificationType } from '../notifications/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { formatMoney } from '../payments/payments.constants';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import type {
   AdminBookingStatus,
   AdminHotelBookingFilter,
@@ -52,6 +55,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @InjectModel(HotelBooking.name) private readonly bookingModel: Model<HotelBookingDocument>,
     @InjectModel(RoomNight.name) private readonly roomNightModel: Model<RoomNightDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectConnection() private readonly connection: Connection,
     // circular with HotelsService (it calls our helpers): forwardRef on both sides
     @Inject(forwardRef(() => HotelsService)) private readonly hotels: HotelsService,
@@ -70,35 +74,34 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  /** PendingPayment past its hold -> Expired, rooms released. */
+  /**
+   * PendingPayment past its hold -> Expired, rooms released.
+   * Each booking is flipped with one conditional update, so when several backends run this
+   * timer against the same database only the one that wins releases the rooms and calls payments.
+   */
   async expireStaleHolds(): Promise<number> {
     const stale = await this.bookingModel
       .find({ status: BookingStatus.PendingPayment, holdExpiresAt: { $lt: new Date() } })
       .select('_id');
-    if (!stale.length) return 0;
-    const ids = stale.map((b) => b._id);
-    await this.bookingModel.updateMany(
-      { _id: { $in: ids }, status: BookingStatus.PendingPayment },
-      { $set: { status: BookingStatus.Expired } },
-    );
-    // only the ones we really expired (a payment may have confirmed one in between)
-    const expired = await this.bookingModel
-      .find({ _id: { $in: ids }, status: BookingStatus.Expired })
-      .select('_id');
-    const expiredIds = expired.map((b) => b._id);
-    await this.roomNightModel.deleteMany({
-      bookingId: { $in: expiredIds },
-      status: RoomNightStatus.Held,
-    });
-    for (const id of expiredIds) {
-      if (!this.payments) break;
-      try {
-        await this.payments.cancelForExpiredHold('hotel', String(id));
-      } catch (e) {
-        this.logger.error(`cancelForExpiredHold failed for ${String(id)}`, e);
+    let expired = 0;
+    for (const { _id } of stale) {
+      const won = await this.bookingModel.findOneAndUpdate(
+        { _id, status: BookingStatus.PendingPayment, holdExpiresAt: { $lt: new Date() } },
+        { $set: { status: BookingStatus.Expired } },
+        { new: true },
+      );
+      if (!won) continue; // confirmed, cancelled or expired by someone else in the meantime
+      expired++;
+      await this.roomNightModel.deleteMany({ bookingId: _id, status: RoomNightStatus.Held });
+      if (this.payments) {
+        try {
+          await this.payments.cancelForExpiredHold('hotel', String(_id));
+        } catch (e) {
+          this.logger.error(`cancelForExpiredHold failed for ${String(_id)}`, e);
+        }
       }
     }
-    return expiredIds.length;
+    return expired;
   }
 
   // ---- HTL-16 + HTL-18: create reservation and hold all rooms atomically ----
@@ -121,6 +124,7 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
 
     const hotel = await this.hotels.findHotelById(dto.hotelId);
     if (!hotel) throw new NotFoundException('Hotel not found');
+    // findHotelById already returns 404 for deactivated hotels; kept as a defensive check
     if (!hotel.isActive) throw new ConflictException('Hotel is not available for booking');
 
     const rooms = await this.hotels.findRoomsByIds(roomIds);
@@ -239,45 +243,85 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ---- HTL-17: called by payments (member 7) after the Stripe webhook is verified ----
+  /**
+   * Atomic: one conditional update flips PendingPayment -> Confirmed, and inside the same
+   * transaction every night must still be held. Two overlapping calls (webhook retry, two
+   * backends) cannot both confirm, and a hold that expired meanwhile cannot be confirmed.
+   * Throws 409 when it cannot confirm; payments then refunds the user in full.
+   */
   async confirmBooking(bookingId: string, paymentId?: string) {
-    const booking = await this.bookingModel.findById(bookingId);
-    if (!booking) throw new NotFoundException('Reservation not found');
-    if (booking.status === BookingStatus.Confirmed) return this.toView(booking); // webhook retry
-    if (booking.status !== BookingStatus.PendingPayment) {
-      throw new ConflictException(`Cannot confirm a ${booking.status} reservation`);
+    if (!/^[a-f\d]{24}$/i.test(bookingId)) throw new NotFoundException('Reservation not found');
+    const id = oid(bookingId);
+
+    let confirmed: HotelBookingDocument | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const reference = `HB-${randomBytes(4).toString('hex').toUpperCase()}`;
+      try {
+        confirmed = await this.connection.transaction(async (session) => {
+          const doc = await this.bookingModel.findOneAndUpdate(
+            { _id: id, status: BookingStatus.PendingPayment, holdExpiresAt: { $gte: new Date() } },
+            {
+              $set: {
+                status: BookingStatus.Confirmed,
+                reference,
+                holdExpiresAt: null,
+                ...(paymentId ? { paymentId } : {}),
+              },
+            },
+            { new: true, session },
+          );
+          if (!doc) return null;
+          const nights = await this.roomNightModel.updateMany(
+            { bookingId: doc._id, status: RoomNightStatus.Held },
+            { $set: { status: RoomNightStatus.Confirmed, holdExpiresAt: null } },
+            { session },
+          );
+          if (nights.modifiedCount !== doc.rooms.length * doc.nights) {
+            // the held nights were released meanwhile: roll everything back
+            throw new ConflictException('The rooms of this reservation are no longer held');
+          }
+          return doc;
+        });
+        break;
+      } catch (e) {
+        // duplicate reference (unique index): nothing was written, try a new one
+        if (isDuplicateKey(e) && attempt < 4) continue;
+        throw e;
+      }
     }
-    if (!booking.holdExpiresAt || booking.holdExpiresAt < new Date()) {
-      
+
+    if (!confirmed) {
+      const current = await this.bookingModel.findById(id);
+      if (!current) throw new NotFoundException('Reservation not found');
+      if (current.status === BookingStatus.Confirmed) return this.toView(current); // webhook retry
+      if (current.status !== BookingStatus.PendingPayment) {
+        throw new ConflictException(`Cannot confirm a ${current.status} reservation`);
+      }
       throw new ConflictException('The hold on this reservation has expired');
     }
-    await this.connection.transaction(async (session) => {
-      booking.status = BookingStatus.Confirmed;
-      booking.reference = `HB-${randomBytes(4).toString('hex').toUpperCase()}`;
-      booking.holdExpiresAt = null;
-      if (paymentId) booking.paymentId = paymentId;
-      await booking.save({ session });
-      await this.roomNightModel.updateMany(
-        { bookingId: booking._id },
-        { $set: { status: RoomNightStatus.Confirmed, holdExpiresAt: null } },
-        { session },
-      );
-    });
+
+    // only the call that won the flip gets here, so the notification is sent once
     await this.notifications.send(
-      booking.userId,
+      confirmed.userId,
       NotificationType.BOOKING_CONFIRMED,
-      `Your reservation ${booking.reference} at ${booking.hotelName} is confirmed (${booking.checkIn} to ${booking.checkOut}).`,
-      { bookingType: 'hotel', bookingId: String(booking._id), reference: booking.reference },
+      `Your reservation ${confirmed.reference} at ${confirmed.hotelName} is confirmed (${confirmed.checkIn} to ${confirmed.checkOut}).`,
+      { bookingType: 'hotel', bookingId: String(confirmed._id), reference: confirmed.reference },
     );
-    return this.toView(booking);
+    return this.toView(confirmed);
   }
 
-  /** Used by payments when a payment fails/expires before confirmation. */
+  /**
+   * Public helper for payments when a payment fails before confirmation (not called today:
+   * the timer above covers it). Atomic, like expireStaleHolds.
+   */
   async expireBooking(bookingId: string) {
-    const booking = await this.bookingModel.findById(bookingId);
-    if (!booking || booking.status !== BookingStatus.PendingPayment) return;
-    booking.status = BookingStatus.Expired;
-    await booking.save();
-    await this.roomNightModel.deleteMany({ bookingId: booking._id });
+    const booking = await this.bookingModel.findOneAndUpdate(
+      { _id: oid(bookingId), status: BookingStatus.PendingPayment },
+      { $set: { status: BookingStatus.Expired } },
+      { new: true },
+    );
+    if (!booking) return;
+    await this.roomNightModel.deleteMany({ bookingId: booking._id, status: RoomNightStatus.Held });
   }
 
   /** PAY-02: payments stores policy acceptance on the reservation. */
@@ -364,18 +408,29 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cancel(userId: string, id: string) {
-    const booking = await this.findOwned(userId, id);
-    this.assertCancellable(booking);
-    const refund = this.computeRefund(booking);
+    const existing = await this.findOwned(userId, id);
+    this.assertCancellable(existing);
+    const refund = this.computeRefund(existing);
 
-    await this.connection.transaction(async (session) => {
-      booking.status = BookingStatus.Cancelled;
-      booking.cancelledAt = new Date();
-      booking.refundPercent = refund.refundPercent;
-      booking.refundAmount = refund.refundAmount;
-      await booking.save({ session });
-      await this.roomNightModel.deleteMany({ bookingId: booking._id }, { session });
+    // Atomic: only one request can flip Confirmed -> Cancelled, so the refund is created once.
+    const booking = await this.connection.transaction(async (session) => {
+      const doc = await this.bookingModel.findOneAndUpdate(
+        { _id: existing._id, userId: existing.userId, status: BookingStatus.Confirmed },
+        {
+          $set: {
+            status: BookingStatus.Cancelled,
+            cancelledAt: new Date(),
+            refundPercent: refund.refundPercent,
+            refundAmount: refund.refundAmount,
+          },
+        },
+        { new: true, session },
+      );
+      if (!doc) throw new ConflictException('This reservation is no longer Confirmed');
+      await this.roomNightModel.deleteMany({ bookingId: doc._id }, { session });
+      return doc;
     });
+
     // refund is created by payments AFTER our transaction committed; a Stripe hiccup must not
     // undo the cancellation (payments records the refund as Failed and can retry).
     let refundId: string | null = null;
@@ -394,12 +449,13 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`refund failed for ${String(booking._id)}`, e);
       }
     }
+    const label = `Your reservation${booking.reference ? ` ${booking.reference}` : ''} at ${booking.hotelName}`;
     await this.notifications.send(
       booking.userId,
       NotificationType.BOOKING_CANCELLED,
       refund.refundAmount > 0
-        ? `Your reservation${booking.reference ? ` ${booking.reference}` : ''} at ${booking.hotelName} was cancelled. A refund of ${refund.refundAmount} is being processed.`
-        : `Your reservation${booking.reference ? ` ${booking.reference}` : ''} at ${booking.hotelName} was cancelled. No refund applies under the hotel's policy.`,
+        ? `${label} was cancelled. A refund of ${formatMoney(refund.refundAmount)} is being processed.`
+        : `${label} was cancelled. No refund applies under the hotel's policy.`,
       {
         bookingType: 'hotel',
         bookingId: String(booking._id),
@@ -410,11 +466,48 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
     return { booking: this.toView(booking), refund: { ...refund, refundId } };
   }
 
-  // ---- HTL-22: moderator view (TODO guard: moderator's own hotel only) ----
+  // ---- HTL-22: moderator view (the own-hotel check is in the controller) ----
   async listForHotel(hotelId: string, query: ListReservationsQueryDto) {
+    const page = query.page ?? 1;
     const filter: Record<string, unknown> = { hotelId: oid(hotelId) };
     if (query.status) filter.status = query.status;
-    return this.paginate(filter, query.page ?? 1, 'userId hotelName checkIn checkOut status reference totalPrice rooms');
+
+    const [rows, total] = await Promise.all([
+      this.bookingModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
+        .select('userId hotelName checkIn checkOut status reference totalPrice rooms')
+        .lean(),
+      this.bookingModel.countDocuments(filter),
+    ]);
+
+    // the guest's name and email; a deactivated user is shown as "Deleted user" (ACC-12)
+    const userIds = [...new Set(rows.map((r) => String(r.userId)))];
+    const users = userIds.length
+      ? await this.userModel
+          .find({ _id: { $in: userIds } })
+          .select('name email status')
+          .lean()
+          .exec()
+      : [];
+    const guestById = new Map(users.map((u) => [String(u._id), u]));
+    const today = todayString();
+
+    const data = rows.map((r) => {
+      const g = guestById.get(String(r.userId));
+      return {
+        ...r,
+        status: r.status === BookingStatus.Confirmed && r.checkOut < today ? 'Completed' : r.status,
+        guest: {
+          _id: r.userId,
+          name: g && g.status !== AccountStatus.Deactivated ? g.name : 'Deleted user',
+          email: g && g.status !== AccountStatus.Deactivated ? g.email : null,
+        },
+      };
+    });
+    return { data, total, page, limit: PAGE_SIZE };
   }
 
   // ---- helpers other modules call ----
@@ -679,10 +772,10 @@ export class HotelBookingsService implements OnModuleInit, OnModuleDestroy {
 
   private assertCancellable(b: HotelBookingDocument) {
     if (b.status !== BookingStatus.Confirmed) {
-      throw new BadRequestException('Only Confirmed reservations can be cancelled');
+      throw new ConflictException('Only Confirmed reservations can be cancelled');
     }
     if (b.checkIn <= todayString()) {
-      throw new BadRequestException('Reservations can only be cancelled before the check-in date');
+      throw new ConflictException('Reservations can only be cancelled before the check-in date');
     }
   }
 
