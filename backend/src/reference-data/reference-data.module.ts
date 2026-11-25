@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ReferenceDataController } from './reference-data.controller';
 import { ReferenceDataSeeder } from './reference-data.seeder';
 import { ReferenceDataService } from './reference-data.service';
 import { Airport, AirportSchema } from './schemas/airport.schema';
@@ -19,6 +20,7 @@ import { Country, CountrySchema } from './schemas/country.schema';
       { name: Attraction.name, schema: AttractionSchema },
     ]),
   ],
+  controllers: [ReferenceDataController],
   providers: [ReferenceDataSeeder, ReferenceDataService],
   exports: [MongooseModule, ReferenceDataService],
 })
