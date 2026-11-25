@@ -1164,3 +1164,19 @@ Address Habiba's review: reject any future date of birth, including one before d
 How the output was used:
 Changed the DOB guard from comparing with departure time to comparing with the current date. Tested the exact case (DOB 2026-12-01, infant, departure 2026-12-20): returned 400. A valid 2026-01-01 infant still returned 201. Build/lint pass.
 ================================================
+================================================
+Date: 2026-11-25
+Student: Mariam
+Tool: OpenCode
+Related Requirement: Milestone 2 foundation; GEN-12, ACC-04, ACC-19, ACC-14, ACC-16, ACC-07a, ACC-13, GEN-07, GEN-10, GEN-16, GEN-17
+Category: Architecture, Implementation, Testing
+Prompt:
+Analyze the Milestone 2 plan and requirements, sync develop, add the missing public reference-data endpoints, then build the shared Next.js 15 + Tailwind 3 foundation and my pages (landing, login, register, profile, admin accounts, admin reports).
+How the output was used:
+- Synced the local develop branch to origin/develop after finding it was stale.
+- Added GET /api/reference/countries and GET /api/reference/cities on a separate backend branch (PR #70), because the frontend needs currency and city lists and no public endpoints existed.
+- Scaffolded the Next.js 15 App Router frontend with TypeScript and Tailwind 3 on port 3001, and configured the /api and /uploads proxy.
+- Built the shared foundation: design tokens, UI kit (Button, Input, Select, Modal, Table, Badge, Pagination, Spinner, EmptyState, ErrorState, and related components), api client with silent refresh and error handling, AuthProvider on /api/auth/me, role guards, role-based layouts/header/sidebar/footer, notification bell, and placeholders for every agreed route.
+- Implemented the landing page, login, register, profile (edit, password change, deactivation) and admin accounts/reports, including suspend/reactivate/reset-password and create-moderator.
+- Verified with npm run build, npm run lint, npm run typecheck, and live proxy tests for login, cookies, refresh, logout, admin accounts, reports, notifications and reference data.
+================================================
