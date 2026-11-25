@@ -26,8 +26,8 @@ export function RouteGuard({ roles, children }: RouteGuardProps) {
     if (status === "loading") return;
 
     if (!user) {
-      const next = encodeURIComponent(pathname || "/");
-      router.replace(`/login?next=${next}`);
+      const nextPath = `${pathname || "/"}${window.location.search}${window.location.hash}`;
+      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
       return;
     }
 

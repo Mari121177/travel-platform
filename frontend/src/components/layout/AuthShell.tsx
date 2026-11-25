@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { FullPageSpinner } from "@/components/ui/Spinner";
 import { Check, Sparkles } from "@/components/ui/icons";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { homePathForRole } from "@/lib/auth/roles";
 import { Logo } from "./Logo";
 
@@ -29,8 +30,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next");
-    const safeNext =
-      next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+    const safeNext = safeNextPath(next, window.location.origin);
 
     router.replace(safeNext ?? homePathForRole(user.role));
   }, [status, user, router]);

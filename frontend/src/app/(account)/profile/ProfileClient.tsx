@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -63,7 +63,6 @@ interface PasswordFieldErrors {
 
 export function ProfileClient() {
   const { user, setUser, logout } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const passwordRequired = searchParams.get("password") === "required";
 
@@ -248,8 +247,7 @@ export function ProfileClient() {
     try {
       await api.delete("/users/me");
       await logout();
-      router.replace("/");
-      router.refresh();
+      window.location.replace("/");
     } catch (error) {
       setDeactivateErrors(getErrorMessages(error));
     } finally {

@@ -400,7 +400,7 @@ export function AccountsClient() {
         </div>
 
         {loading && !data ? (
-          <TableSkeleton rows={6} columns={5} />
+          <TableSkeleton rows={6} columns={6} />
         ) : accounts.length === 0 ? (
           <div className="p-5">
             <EmptyState

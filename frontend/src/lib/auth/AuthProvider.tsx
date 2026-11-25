@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { AuthUser } from "@/lib/types";
 
 export type AuthStatus = "loading" | "authenticated" | "guest";
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const mountedRef = useRef(true);
+  const userRef = useRef<AuthUser | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setUser = useCallback((next: AuthUser | null) => {
+    userRef.current = next;
     setUserState(next);
     setStatus(next ? "authenticated" : "guest");
   }, []);
@@ -47,8 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const current = await api.get<AuthUser>("/auth/me");
       if (mountedRef.current) setUser(current);
       return current;
-    } catch {
-      if (mountedRef.current) setUser(null);
+    } catch (error) {
+      const statusCode = error instanceof ApiError ? error.status : 0;
+      if (statusCode === 401 || statusCode === 403) {
+        if (mountedRef.current) setUser(null);
+        return null;
+      }
+      if (mountedRef.current && !userRef.current) {
+        setStatus("guest");
+      }
       return null;
     }
   }, [setUser]);

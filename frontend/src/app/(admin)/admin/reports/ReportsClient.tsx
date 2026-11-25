@@ -320,7 +320,7 @@ export function ReportsClient() {
 
       <div className="card-surface overflow-hidden">
         {loading && !data ? (
-          <TableSkeleton rows={6} columns={5} />
+          <TableSkeleton rows={6} columns={6} />
         ) : reports.length === 0 ? (
           <div className="p-5">
             <EmptyState
