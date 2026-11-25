@@ -18,7 +18,6 @@ import { CreateHotelBookingDto } from './dto/create-hotel-booking.dto';
 import { ListBookingsQueryDto } from './dto/queries.dto';
 import { HotelBookingsService } from './hotel-bookings.service';
 import { ParseObjectIdPipe } from './parse-object-id.pipe';
-import {DevConfirmController} from "./dev-confirm.controller";
 
 // Login is required globally; @Roles(Role.User) limits these routes to registered users (ACC-11).
 @ApiTags('Hotel Bookings')
