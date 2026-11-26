@@ -17,10 +17,10 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800",
   secondary:
-    "bg-slate-900 text-white shadow-sm hover:bg-slate-800 active:bg-slate-700",
+    "bg-brand-500 text-white shadow-sm hover:bg-brand-600 active:bg-brand-700",
   outline:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100",
-  ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    "border border-brand-200 bg-white text-brand-700 hover:bg-brand-50 active:bg-brand-100",
+  ghost: "text-brand-700 hover:bg-brand-50 hover:text-brand-800",
   danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800",
   success:
     "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800",

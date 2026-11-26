@@ -152,6 +152,38 @@ Use `buttonClasses(...)` from `@/lib/ui` when you need a button-styled link.
 `ConfirmDialog` is required before destructive actions (delete, cancel,
 suspend).
 
+## Colors
+
+Use the shared Tailwind tokens. Do not hardcode hex values in pages.
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| `brand-600` | `#7C1E8B` | Primary: buttons, links, headings, icons |
+| `brand-500` | `#9635A3` | Secondary: hover states, secondary buttons |
+| `brand-900` | `#4E1E52` | Dark: footer, dark panels, overlays |
+| `brand-300` / `accent-400` | `#B56BC0` | Decorative highlights |
+| `brand-100` | `#E8D6ED` | Borders, light surfaces |
+| `brand-50` | `#F7F1F9` | Subtle sections, active navigation |
+| `canvas` | `#F7F1F9` | Page background |
+| `line` | `#E8D6ED` | Borders |
+| `ink` | `#4E1E52` | Main text |
+| `white` | `#FFFFFF` | Cards and content surfaces |
+
+Common classes:
+
+- Page background: `bg-canvas`
+- Card: `bg-white border border-line`
+- Primary button: `bg-brand-600 text-white hover:bg-brand-700`
+- Secondary button: `bg-brand-500 text-white hover:bg-brand-600`
+- Outline button: `border-brand-200 text-brand-700 hover:bg-brand-50`
+- Links, headings and icons: `text-brand-600` or `text-brand-700`
+- Active navigation: `bg-brand-50 text-brand-700`
+- Dark footer or panel: `bg-brand-900 text-white`
+- Focus ring: `focus-visible:ring-brand-500`
+
+Semantic colors stay as they are: success green, error red, warning amber,
+info blue.
+
 ## Page conventions
 
 Every page needs:
