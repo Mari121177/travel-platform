@@ -1,14 +1,17 @@
-import { RoutePlaceholder } from "@/components/layout/RoutePlaceholder";
+import { Suspense } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { FlightsClient } from "./FlightsClient";
 
 export default function FlightsPage() {
   return (
-    <div className="container-page py-8 sm:py-10">
-      <RoutePlaceholder
-        title="Flight search"
-        owner="Ghada"
-        requirements={["FLT-11", "FLT-12", "FLT-15", "GEN-05", "GEN-16"]}
-        description="Search flights by route, date and passengers, then filter, sort and paginate the results."
+    <div className="container-page space-y-6 py-8 sm:py-10">
+      <PageHeader
+        title="Find your flight"
+        description="Search by route, date and passengers, then filter and sort the results."
       />
+      <Suspense fallback={null}>
+        <FlightsClient />
+      </Suspense>
     </div>
   );
 }

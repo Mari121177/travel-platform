@@ -1180,3 +1180,60 @@ How the output was used:
 - Implemented the landing page, login, register, profile (edit, password change, deactivation) and admin accounts/reports, including suspend/reactivate/reset-password and create-moderator.
 - Verified with npm run build, npm run lint, npm run typecheck, and live proxy tests for login, cookies, refresh, logout, admin accounts, reports, notifications and reference data.
 ================================================
+================================================
+Date: 2026-11-27
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, FLT-17, GEN-06
+Category: TypeScript types and display helpers
+I am building the /flights pages in Next.js against my merged flight search and details endpoints. 
+Read the backend DTOs for GET /api/flights/search, GET /api/flights/:id and GET /api/airports 
+and give me matching TypeScript types (including the optional return leg and the "No flights found" message), 
+and small helpers that format duration and read the airport-local time and date from the ISO strings without converting to the browser time zone.
+How the output was used: Created types.ts and format.ts from the suggested types and helpers after comparing the field names with the backend DTOs; the pages use the *Local fields for display (GEN-06).
+================================================
+================================================
+Date: 2026-11-27
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-02
+Category: Airport search input
+Using the shared Input component and fetch client, can you help me write the airport search input for the flight search form: 
+debounce the search against GET /api/airports?q=, abort stale requests, show loading, error and "No airports found"
+states in the dropdown, close on outside click, and make the value the chosen IATA code only, so typed text counts as not chosen.
+How the output was used: Added AirportPicker.tsx, changed the dropdown border and hover classes to the project's colour tokens, and tested typing in both fields in the browser.
+================================================
+================================================
+Date: 2026-11-27
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-11, FLT-12, GEN-16
+Category: Search form and validation
+How do I make a search form for /flights? I want to include one-way and round-trip options, two airport pickers, date fields, 
+adults/children/infants counts and a cabin select, using only the shared UI components, and validate listed airports, different origin and destination, no past departure, 
+return not before departure, at least one adult and infants not above adults. 
+After testing, I asked for these changes: let me clear the count fields while typing, with children and infants defaulting back to 0 and adults to 1 
+when the field loses focus, and let me type a date in one go as DD/MM/YYYY with a calendar button.
+How the output was used: Created SearchForm.tsx and DateField.tsx and applied the follow-up edits; I tested the validation messages, the empty-field behaviour of the counts and the typed and calendar date entry in the browser.
+================================================
+================================================
+Date: 2026-11-27
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-12, FLT-15, GEN-05, GEN-16
+Category: Results page with URL state
+I want to make /flights so the search, sort (price, duration, departure time), min/max price and page all live in the URL query string and drive a fetch to GET /api/flights/search. 
+Show skeleton cards while loading, an error state with retry, a "No flights found" state, separate outbound and return lists for round trips, 
+a flight card with local times and cabin badges, and the shared Pagination using the larger of the two total page counts.
+How the output was used: I created the files and replaced the placeholder page. I added 12 test flights with cabins in MongoDB 
+so there were 13 flights on CAI to DXB, and checked sorting, the price filter, page 2, and that a refresh keeps the same page and sort.
+================================================
+================================================
+Date: 2026-11-27
+Student: Ghada Haitham
+Tool: Claude
+Related Requirement: FLT-17, GEN-06
+Category: Flight details page
+How do I build a flight details page showing times, cabins, baggage and the cancellation policy, with loading, error and not-found states?
+How the output was used: I created the component and page, applied the back-navigation fix, 
+and tested opening a flight from the results and going back with the same search, sort and page.
