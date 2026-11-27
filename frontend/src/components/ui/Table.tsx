@@ -34,7 +34,7 @@ export function THead({
   return (
     <thead
       className={cn(
-        "bg-slate-50 text-xs uppercase tracking-wide text-slate-500",
+        "bg-brand-50/70 text-xs uppercase tracking-wide text-brand-700",
         className,
       )}
       {...props}
@@ -63,7 +63,7 @@ export function Tr({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("transition-colors hover:bg-slate-50/70", className)}
+      className={cn("transition-colors hover:bg-brand-50/50", className)}
       {...props}
     >
       {children}
